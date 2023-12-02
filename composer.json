@@ -1,0 +1,20 @@
+{
+    "name": "anzeblabla/simplite",
+    "description": "A very simple and light PHP framework.",
+    "type": "library",
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "AnzeBlaBla\\Simplite\\": "src/"
+        }
+    },
+    "authors": [{
+        "name": "AnzeBlaBla",
+        "email": "anzemajblabla@gmail.com"
+    }],
+    "require": {
+        "php": ">=8.1.0"
+    },
+    "license": "GPL-3.0-or-later",
+    "bin": "bin/simplite"
+}
