@@ -48,6 +48,8 @@ class Application
         }
         self::$instance = $this;
 
+        session_start(); // TODO: maybe shouldn't be here?
+
         $config = self::merge_config($config, [
             'debug' => false,
             'root_directory' => dirname(debug_backtrace()[0]['file']),
