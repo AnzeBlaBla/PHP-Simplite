@@ -295,7 +295,7 @@ class Application
     /**
      * Redirects to the given url
      * @param string $url
-     * @return void
+     * @return never
      */
     public function redirect($url)
     {
