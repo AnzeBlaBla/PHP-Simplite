@@ -74,27 +74,27 @@ class Application
     private function validateConfig($config)
     {
         if (!isset($config['root_directory'])) {
-            throw new \Exception("Root directory not set");
+            throw new \Exception("Root directory not set (please set it in the Application config)");
         }
 
         // Root directory must exist
         if (!file_exists($config['root_directory'])) {
-            throw new \Exception("Root directory does not exist");
+            throw new \Exception("Root directory does not exist (please create $config[root_directory])");
         }
 
         // Router folder must exist
         if (!file_exists($config['root_directory'] . '/' . $config['router_folder'])) {
-            throw new \Exception("Router folder does not exist");
+            throw new \Exception("Router folder does not exist (please create $config[root_directory]/$config[router_folder])");
         }
 
         // Api folder must exist
         if (!file_exists($config['root_directory'] . '/' . $config['api_folder'])) {
-            throw new \Exception("Api folder does not exist");
+            throw new \Exception("Api folder does not exist (please create $config[root_directory]/$config[api_folder])");
         }
 
         // Components folder must exist
         if (!file_exists($config['root_directory'] . '/' . $config['components_folder'])) {
-            throw new \Exception("Components folder does not exist");
+            throw new \Exception("Components folder does not exist (please create $config[root_directory]/$config[components_folder])");
         }
 
         // If db is set, it must be an array
