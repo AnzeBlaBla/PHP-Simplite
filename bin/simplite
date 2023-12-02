@@ -13,26 +13,26 @@ define('TEMPLATES', [
     'component' => `<?php
     /**
      * Example component {TEMPLATE_NAME}
-     * @var string $COMPONENT_ID
-     * @var string $example_prop
+     * @var string \$COMPONENT_ID
+     * @var string \$example_prop
      */
     ?>
-    <div id="<?= $COMPONENT_ID ?>">
+    <div id="<?= \$COMPONENT_ID ?>">
         <h1>Example component</h1>
-        <p>Example prop: <?= $example_prop ?></p>
+        <p>Example prop: <?= \$example_prop ?></p>
     </div>`,
     'page' => `<?php
     /**
      * Example page {TEMPLATE_NAME}
-     * @var AnzeBlaBla\Simplite\Application $app
+     * @var AnzeBlaBla\Simplite\Application \$app
      */
     
-    $app->debug("Example debug message");
+     \$app->debug("Example debug message");
     
     ?>
     <h1>Example page</h1>
     
-    <p>URI: <?= $app->request->uri ?></p>`,
+    <p>URI: <?= \$app->request->uri ?></p>`,
     'api' => `<?php
     /**
      * Example API route {TEMPLATE_NAME}
@@ -41,8 +41,8 @@ define('TEMPLATES', [
     use AnzeBlaBla\Simplite\Application;
     
     return [
-        "GET" => function (Application $app) {
-            if (!isset($app->request->query['test'])) {
+        "GET" => function (Application \$app) {
+            if (!isset(\$app->request->query['test'])) {
                 http_response_code(400);
                 return [
                     "success" => false,
@@ -54,8 +54,8 @@ define('TEMPLATES', [
                 "message" => "Hello world!",
             ];
         },
-        "POST" => function (Application $app) {
-            if (!$app->request->hasBody(['test'])) {
+        "POST" => function (Application \$app) {
+            if (!\$app->request->hasBody(['test'])) {
                 http_response_code(400);
                 return [
                     "success" => false,
@@ -71,11 +71,11 @@ define('TEMPLATES', [
     'layout' => `<?php
     /**
      * Example layout {TEMPLATE_NAME}
-     * @var string $content
+     * @var string \$content
      */
     ?>
     <div>
-        <?= $content ?>
+        <?= \$content ?>
     </div>`
 ]);
 
