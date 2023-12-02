@@ -130,15 +130,15 @@ class Arguments {
 }
 
 // Parse arguments
-$args = new Arguments($argv);
-$binary = $args->consume();
+$arguments = new Arguments($argv);
+$binary = $arguments->consume();
 
-if (!$args->hasMore()) {
+if (!$arguments->hasMore()) {
     echo get_help_text();
     exit(1);
 }
 
-$command = $args->consume();
+$command = $arguments->consume();
 
 // Handle command
 switch ($command) {
