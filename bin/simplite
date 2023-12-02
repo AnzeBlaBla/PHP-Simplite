@@ -86,8 +86,8 @@ set_error_handler(function ($code, $message, $filename, $lineno) {
     throw new ErrorException($message, $code, 0, $filename, $lineno);
 });
 
-$base_path = $_composer_autoload_path ? dirname($_composer_autoload_path) . '../' : __DIR__ . '/..';
-define('BASE_PATH', $BASE_PATH);
+$base_path = isset($_composer_autoload_path) ? dirname($_composer_autoload_path) . '../' : __DIR__ . '/..';
+define('BASE_PATH', $base_path);
 
 
 include BASE_PATH . '/vendor/autoload.php';
