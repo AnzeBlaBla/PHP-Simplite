@@ -86,7 +86,7 @@ set_error_handler(function ($code, $message, $filename, $lineno) {
     throw new ErrorException($message, $code, 0, $filename, $lineno);
 });
 
-$base_path = isset($_composer_autoload_path) ? dirname($_composer_autoload_path) . '../' : __DIR__ . '/..';
+$base_path = isset($_composer_autoload_path) ? dirname($_composer_autoload_path) . '/../' : __DIR__ . '/..';
 define('BASE_PATH', $base_path);
 
 
