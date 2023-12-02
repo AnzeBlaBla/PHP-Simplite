@@ -48,7 +48,7 @@ class Application
         }
         self::$instance = $this;
 
-        $this->config = self::merge_config($config, [
+        $config = self::merge_config($config, [
             'debug' => false,
             'root_directory' => dirname(debug_backtrace()[0]['file']),
             'router_folder' => 'pages',
@@ -58,11 +58,52 @@ class Application
             // db (optional) { host, dbname, username, password }
         ]);
 
+        $this->validateConfig($config);
+
+        $this->config = $config;
+
         if (isset($this->config['db'])) {
             $this->db = DB::getInstance();
         }
 
         $this->request = new Request();
+    }
+
+    private function validateConfig($config)
+    {
+        if (!isset($config['root_directory'])) {
+            throw new \Exception("Root directory not set");
+        }
+
+        // Root directory must exist
+        if (!file_exists($config['root_directory'])) {
+            throw new \Exception("Root directory does not exist");
+        }
+
+        // Router folder must exist
+        if (!file_exists($config['root_directory'] . '/' . $config['router_folder'])) {
+            throw new \Exception("Router folder does not exist");
+        }
+
+        // Api folder must exist
+        if (!file_exists($config['root_directory'] . '/' . $config['api_folder'])) {
+            throw new \Exception("Api folder does not exist");
+        }
+
+        // Components folder must exist
+        if (!file_exists($config['root_directory'] . '/' . $config['components_folder'])) {
+            throw new \Exception("Components folder does not exist");
+        }
+
+        // If db is set, it must be an array
+        if (isset($config['db']) && !is_array($config['db'])) {
+            throw new \Exception("DB config must be an array");
+        }
+
+        // If db is set, it must have host, dbname, username and password
+        if (isset($config['db']) && (!isset($config['db']['host']) || !isset($config['db']['dbname']) || !isset($config['db']['username']) || !isset($config['db']['password']))) {
+            throw new \Exception("DB config must have host, dbname, username and password");
+        }
     }
 
     public function getConfig($key = null)
