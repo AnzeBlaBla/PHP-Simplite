@@ -16,5 +16,5 @@
         "php": ">=8.1.0"
     },
     "license": "GPL-3.0-or-later",
-    "bin": "bin/simplite.php"
+    "bin": "bin/simplite"
 }

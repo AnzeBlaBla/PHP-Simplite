@@ -1,0 +1,221 @@
+<?php
+/**
+ * CLI tool for Simplite
+ * Handles:
+ * - creating new project
+ * - creating new component
+ * - creating new page
+ * - creating new API
+ * - creating new layout
+ */
+
+define('TEMPLATES', [
+    'component' => `<?php
+    /**
+     * Example component {TEMPLATE_NAME}
+     * @var string $COMPONENT_ID
+     * @var string $example_prop
+     */
+    ?>
+    <div id="<?= $COMPONENT_ID ?>">
+        <h1>Example component</h1>
+        <p>Example prop: <?= $example_prop ?></p>
+    </div>`,
+    'page' => `<?php
+    /**
+     * Example page {TEMPLATE_NAME}
+     * @var AnzeBlaBla\Simplite\Application $app
+     */
+    
+    $app->debug("Example debug message");
+    
+    ?>
+    <h1>Example page</h1>
+    
+    <p>URI: <?= $app->request->uri ?></p>`,
+    'api' => `<?php
+    /**
+     * Example API route {TEMPLATE_NAME}
+     */
+    
+    use AnzeBlaBla\Simplite\Application;
+    
+    return [
+        "GET" => function (Application $app) {
+            if (!isset($app->request->query['test'])) {
+                http_response_code(400);
+                return [
+                    "success" => false,
+                    "message" => "Missing required query parameter: test"
+                ];
+            }
+            return [
+                "success" => true,
+                "message" => "Hello world!",
+            ];
+        },
+        "POST" => function (Application $app) {
+            if (!$app->request->hasBody(['test'])) {
+                http_response_code(400);
+                return [
+                    "success" => false,
+                    "message" => "Missing required body parameter: test or test2"
+                ];
+            }
+            return [
+                "success" => true,
+                "message" => "Hello world!",
+            ];
+        }
+    ];`,
+    'layout' => `<?php
+    /**
+     * Example layout {TEMPLATE_NAME}
+     * @var string $content
+     */
+    ?>
+    <div>
+        <?= $content ?>
+    </div>`
+]);
+
+
+// https://stackoverflow.com/a/2071048/1478566
+// The above code is necessary to terminate program in case of an error
+set_error_handler(function ($code, $message, $filename, $lineno) {
+    throw new ErrorException($message, $code, 0, $filename, $lineno);
+});
+
+$base_path = $_composer_autoload_path ? dirname($_composer_autoload_path) . '../' : __DIR__ . '/..';
+define('BASE_PATH', $BASE_PATH);
+
+
+include BASE_PATH . '/vendor/autoload.php';
+
+class Arguments {
+
+    public $arguments;
+    private $consumedNumber = 0;
+
+    public function __construct($arguments)
+    {
+        $this->arguments = $arguments;
+    }
+
+    /**
+     * Consumes next argument
+     * @return string
+     * @throws Exception
+     */
+    public function consume()
+    {
+        $this->consumedNumber++;
+
+        if ($this->consumedNumber > count($this->arguments)) {
+            throw new Exception("Not enough arguments");
+        }
+
+        return $this->arguments[$this->consumedNumber - 1];
+    }
+
+
+    /**
+     * Returns true if there are more arguments
+     * @return bool
+     */
+    public function hasMore()
+    {
+        return $this->consumedNumber < count($this->arguments);
+    }
+}
+
+// Parse arguments
+$args = new Arguments($argv);
+$binary = $args->consume();
+
+if (!$args->hasMore()) {
+    echo get_help_text();
+    exit(1);
+}
+
+$command = $args->consume();
+
+// Handle command
+switch ($command) {
+    case 'new':
+        handle_new_command($arguments);
+        break;
+    default:
+        echo "Unknown command: $command\n";
+        echo get_help_text();
+        exit(1);
+}
+
+/**
+ * Handles new command
+ * @param Arguments $arguments
+ * @return void
+ */
+function handle_new_command($arguments)
+{
+    if (!$arguments->hasMore()) {
+        echo get_help_text('new');
+        exit(1);
+    }
+
+    $type = $arguments->consume();
+    $name = $arguments->consume();
+
+    switch ($type) {
+        case 'component':
+            create_file($name, 'component', 'components');
+            break;
+        case 'page':
+            create_file($name, 'page', 'pages');
+            break;
+        case 'api':
+            create_file($name, 'api', 'api');
+            break;
+        case 'layout':
+            create_file($name, 'layout', 'layouts');
+            break;
+        default:
+            echo "Unknown type: $type\n";
+            echo get_help_text('new');
+            exit(1);
+    }
+}
+
+/**
+ * Creates a new file from the TEMPLATES
+ * @param string $name
+ * @param string $template
+ * @param string $folder
+ * @return void
+ */
+function create_file($name, $template, $folder)
+{
+    if (file_exists(BASE_PATH . "/$folder/$name.php")) {
+        echo "File already exists: $name\n";
+        exit(1);
+    }
+
+    $template = TEMPLATES[$template];
+    $template = str_replace('{TEMPLATE_NAME}', $name, $template);
+
+    file_put_contents(BASE_PATH . "/$folder/$name.php", $template);
+    echo "Created file: $name\n";
+}
+
+function get_help_text($command = "")
+{
+    switch ($command) {
+        case 'new':
+            return "Usage: php simplite.php new [component|page|api|layout] [name]\n";
+        case '':
+            return "Usage: php simplite.php [command] [arguments]\n";
+        default:
+            return "Unknown command: $command\n";
+    }
+}
+

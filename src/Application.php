@@ -277,7 +277,15 @@ class Application
     public function debug($message)
     {
         if ($this->DEBUG) {
-            echo $message . '<br>';
+
+            // If message is an array, use print_r
+            if (is_array($message)) {
+                echo "<pre>";
+                print_r($message);
+                echo "</pre>";
+            } else {
+                echo $message . "<br>";
+            }
         }
     }
     #endregion

@@ -5,14 +5,14 @@ namespace AnzeBlaBla\Simplite;
 class Request
 {
     public $method;
-    public $path;
+    public $uri;
     public $query;
     private $body;
 
     public function __construct()
     {
         $this->method = $_SERVER['REQUEST_METHOD'];
-        $this->path = $_SERVER['REQUEST_URI'];
+        $this->uri = $_SERVER['REQUEST_URI'];
         $this->query = $_GET;
         if (isset($_SERVER['CONTENT_TYPE']) && $_SERVER['CONTENT_TYPE'] == 'application/json') {
             $this->body = json_decode(file_get_contents('php://input'), true);
