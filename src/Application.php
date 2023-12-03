@@ -267,7 +267,16 @@ class Application
             try {
                 $this->rendered_html = $router->render($url_parts);
             } catch (\Throwable $th) {
-                $this->rendered_html = "Error: " . $th->getMessage() . "<br>" . $th->getTraceAsString();
+                // if debug is on, show error
+                if ($this->config['debug']) {
+                    $this->rendered_html = "Error: " . $th->getMessage() . "<br>" . $th->getTraceAsString();
+                } else {
+                    // if code is 200, set it to 500
+                    if (http_response_code() == 200) {
+                        http_response_code(500);
+                    }
+                    $this->rendered_html = "Error: " . $th->getMessage();
+                }
             }
         }
 
