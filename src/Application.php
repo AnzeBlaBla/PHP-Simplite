@@ -206,20 +206,16 @@ class Application
      */
     public function addBasicAuth(BasicAuthConfig $config)
     {
-        function doError($config)
-        {
+        if (
+            !isset($_SERVER['PHP_AUTH_USER'])
+            || !isset($_SERVER['PHP_AUTH_PW'])
+            || $_SERVER['PHP_AUTH_USER'] != $config->username
+            || $_SERVER['PHP_AUTH_PW'] != $config->password
+        ) {
             header('WWW-Authenticate: Basic realm="' . $config->realm . '"');
             header('HTTP/1.0 401 Unauthorized');
             echo $config->message;
             exit;
-        }
-
-        if (!isset($_SERVER['PHP_AUTH_USER'])) {
-            doError($config);
-        } else {
-            if ($_SERVER['PHP_AUTH_USER'] != $config->username || $_SERVER['PHP_AUTH_PW'] != $config->password) {
-                doError($config);
-            }
         }
     }
 
