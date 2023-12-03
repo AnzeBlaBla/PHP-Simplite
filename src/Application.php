@@ -4,6 +4,22 @@ namespace AnzeBlaBla\Simplite;
 
 use AnzeBlaBla\Simplite\Router;
 
+class BasicAuthConfig
+{
+    public $username;
+    public $password;
+    public $realm;
+    public $message;
+
+    public function __construct($username, $password, $realm = "My Realm", $message = "Text to send if user hits Cancel button")
+    {
+        $this->username = $username;
+        $this->password = $password;
+        $this->realm = $realm;
+        $this->message = $message;
+    }
+}
+
 class Application
 {
     private static $instance;
@@ -182,6 +198,30 @@ class Application
     }
 
     #endregion
+
+    /**
+     * Adds basic auth to the page
+     * @param BasicAuthConfig $config
+     * @return void
+     */
+    public function addBasicAuth(BasicAuthConfig $config)
+    {
+        function doError($config)
+        {
+            header('WWW-Authenticate: Basic realm="' . $config->realm . '"');
+            header('HTTP/1.0 401 Unauthorized');
+            echo $config->message;
+            exit;
+        }
+
+        if (!isset($_SERVER['PHP_AUTH_USER'])) {
+            doError($config);
+        } else {
+            if ($_SERVER['PHP_AUTH_USER'] != $config->username || $_SERVER['PHP_AUTH_PW'] != $config->password) {
+                doError($config);
+            }
+        }
+    }
 
     /**
      * Renders the page
