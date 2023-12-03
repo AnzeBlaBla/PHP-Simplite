@@ -7,9 +7,9 @@ This is a very simple PHP framework to make implementig PHP websites easier and 
 TODO: write
 ## Todo
 
-- [ ] Write documentation
+- [ ] Write better documentation
 - [ ] Write tests
-- [ ] Write more TODO
+- [ ] Redo how GET and POST parameters are handled
 
 ## Publishing
 

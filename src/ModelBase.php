@@ -33,77 +33,78 @@ class ModelBase
 
 
 
-    static function checkSchemaVars($caller)
+    /**
+     * Check if the schema variables are defined
+     * @throws \Exception
+     * @return void
+     */
+    static function checkSchemaVars()
     {
-        if ($caller::$_TABLE === null) {
-            throw new \Exception('Please define $_TABLE in your model for ' . $caller);
+        if (static::$_TABLE === null) {
+            throw new \Exception('Please define $_TABLE in your model for ' . static::class);
         }
-        if ($caller::$_COLUMNS === null) {
-            throw new \Exception('Please define $_COLUMNS in your model for ' . $caller);
+        if (static::$_COLUMNS === null) {
+            throw new \Exception('Please define $_COLUMNS in your model for ' . static::class);
         }
     }
 
     /**
      * Get all objects
-     * @return object[]
      */
-    public static function all(): array
+    public static function all()
     {
-        $caller = get_called_class();
-        self::checkSchemaVars($caller);
-        $table = $caller::$_TABLE;
-        $class = get_called_class(); // To create the child class
+        static::checkSchemaVars();
+
+        $table = static::$_TABLE;
         $app = Application::getInstance();
         $data = $app->db->fetchAll("SELECT * FROM $table");
 
-        return self::constructMany($data);
+        return static::constructMany($data);
     }
 
     /**
      * Get object by id
      * @param int $id
-     * @return object|null
+     * @return static|null
      */
-    public static function get($id): ?object
+    public static function get($id)
     {
-        $caller = get_called_class();
-        self::checkSchemaVars($caller);
-        $table = $caller::$_TABLE;
-        $class = get_called_class(); // To create the child class
+        static::checkSchemaVars();
+        $table = static::$_TABLE;
         $app = Application::getInstance();
         $data = $app->db->fetchOne("SELECT * FROM $table WHERE id = ?", [$id]);
 
         if (!$data) {
             return null;
         }
-        return new $class($data);
+        return new static($data);
     }
 
     /**
      * Get objects by query
      */
-    public static function find($query, $params = []): array
+    public static function find($query, $params = [])
     {
-        $caller = get_called_class();
-        self::checkSchemaVars($caller);
-        $table = $caller::$_TABLE;
-        
+        static::checkSchemaVars();
+
         $app = Application::getInstance();
+
+        $table = static::$_TABLE;
         $data = $app->db->fetchAll("SELECT * FROM $table WHERE $query", $params);
 
-        return self::constructMany($data);
+        return static::constructMany($data);
     }
 
     /**
      * Construct array of objects from array of data
+     * @param array $data
+     * @return static[]
      */
-    public static function constructMany($data): array
+    public static function constructMany($data)
     {
-        $class = get_called_class(); // To create the child class
-
         $objects = [];
         foreach ($data as $row) {
-            $objects[] = new $class($row);
+            $objects[] = new static($row);
         }
         return $objects;
     }
@@ -124,18 +125,17 @@ class ModelBase
      */
     public function create()
     {
-        $caller = get_called_class();
-        self::checkSchemaVars($caller);
-        $caller = get_called_class();
-        $table = $caller::$_TABLE;
+        static::checkSchemaVars();
+
+        $table = static::$_TABLE;
         $app = Application::getInstance();
 
         $columns = [];
         $values = [];
         $placeholders = [];
 
-        foreach ($caller::$_COLUMNS as $column) {
-            if (in_array($column, $caller::$_AUTO_INCREMENT)) {
+        foreach (static::$_COLUMNS as $column) {
+            if (in_array($column, static::$_AUTO_INCREMENT)) {
                 continue;
             }
 
@@ -160,17 +160,16 @@ class ModelBase
      */
     public function update()
     {
-        $caller = get_called_class();
-        self::checkSchemaVars($caller);
-        $caller = get_called_class();
-        $table = $caller::$_TABLE;
+        static::checkSchemaVars();
+
+        $table = static::$_TABLE;
         $app = Application::getInstance();
 
         $columns = [];
         $values = [];
 
-        foreach ($caller::$_COLUMNS as $column) {
-            if (in_array($column, $caller::$_AUTO_INCREMENT)) {
+        foreach (static::$_COLUMNS as $column) {
+            if (in_array($column, static::$_AUTO_INCREMENT)) {
                 continue;
             }
 
@@ -194,12 +193,11 @@ class ModelBase
      */
     public function toArray()
     {
-        $caller = get_called_class();
-        self::checkSchemaVars($caller);
+        static::checkSchemaVars();
 
         $out = [];
-        foreach ($caller::$_COLUMNS as $key) {
-            if (!in_array($key, $caller::$_SENSITIVE)) {
+        foreach (static::$_COLUMNS as $key) {
+            if (!in_array($key, static::$_SENSITIVE)) {
                 $out[$key] = $this->$key;
             }
         }
