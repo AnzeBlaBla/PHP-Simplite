@@ -71,6 +71,12 @@ class Router
         return $output;
     }
 
+    public static function make404($error = "Page not found")
+    {
+        http_response_code(404);
+        throw new \Exception($error);
+    }
+
     private function getRenderList(): array
     {
         // handle exit condition
@@ -81,8 +87,7 @@ class Router
                 if (file_exists($this->current_path . '/index.php')) {
                     $this->render_list[] = $this->current_path . '/index.php';
                 } else {
-                    http_response_code(404);
-                    throw new \Exception("Index file not found");
+                    Router::make404("Index file not found");
                 }
             }
 
@@ -94,18 +99,17 @@ class Router
 
         // if directory exists
         if (is_dir($this->current_path . '/' . $current_url_part)) { // if we have layout, add it
-            
+
             if (file_exists($this->current_path . '/' . $current_url_part . '/' . self::$LAYOUT_FILENAME)) {
                 $this->render_list[] = $this->current_path . '/' . $current_url_part . '/' . self::$LAYOUT_FILENAME;
             }
 
             $this->current_path .= '/' . $current_url_part;
             return $this->getRenderList();
-            
         } else if (file_exists($this->current_path . '/' . $current_url_part . '.php')) { // if exact file exists
 
             $this->render_list[] = $this->current_path . '/' . $current_url_part . '.php';
-            
+
             $this->current_path .= '/' . $current_url_part;
 
             return $this->getRenderList();
@@ -128,8 +132,7 @@ class Router
                 return $this->getRenderList();
             }
         } else {
-            http_response_code(404);
-            throw new \Exception("Page not found");
+            Router::make404();
         }
     }
 
