@@ -2,6 +2,16 @@
 
 namespace AnzeBlaBla\Simplite;
 
+use finfo;
+
+
+define("EXTENSIONS_MAP", [
+    "html" => "text/html",
+    "css" => "text/css",
+    "js" => "text/javascript",
+    "json" => "application/json",
+    "xml" => "application/xml"
+]);
 
 class Router
 {
@@ -53,9 +63,14 @@ class Router
         if (strpos($render_list[0], '.php') !== strlen($render_list[0]) - 4) {
             $output = file_get_contents($render_list[0]);
 
-            $result = new finfo();
+            $extension = pathinfo($render_list[0], PATHINFO_EXTENSION);
 
-            $mime_type = $result->buffer($output, FILEINFO_MIME_TYPE);
+            if (isset(EXTENSIONS_MAP[$extension])) {
+                $mime_type = EXTENSIONS_MAP[$extension];
+            } else {
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime_type = $finfo->file($render_list[0]);
+            }
 
             header("Content-Type: $mime_type");
         } else {
@@ -125,6 +140,14 @@ class Router
             $this->current_path .= '/' . $current_url_part;
 
             return $this->getRenderList();
+        } else if (file_exists($this->current_path . '/' . $current_url_part . '.php')) { // if exact file exists (PHP)
+
+            $this->render_list[] = $this->current_path . '/' . $current_url_part . '.php';
+
+            $this->current_path .= '/' . $current_url_part;
+
+            return $this->getRenderList();
+
         } else if ($dynamic_obj = $this->getDynamic($this->current_path)) { // if dynamic part exists
 
             if ($dynamic_obj["type"] == "file") {
