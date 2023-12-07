@@ -106,9 +106,9 @@ class Router
 
             $this->current_path .= '/' . $current_url_part;
             return $this->getRenderList();
-        } else if (file_exists($this->current_path . '/' . $current_url_part . '.php')) { // if exact file exists
+        } else if (file_exists($this->current_path . '/' . $current_url_part)) { // if exact file exists
 
-            $this->render_list[] = $this->current_path . '/' . $current_url_part . '.php';
+            $this->render_list[] = $this->current_path . '/' . $current_url_part;
 
             $this->current_path .= '/' . $current_url_part;
 
@@ -159,11 +159,11 @@ class Router
             if (is_dir($path) && strpos($file, '[') === 0 && strpos($file, ']') === strlen($file) - 1) {
                 $dynamic_objects[] = $file;
             } else if (is_file($path)) {
-                // ignore non php
+                // must be PHP file
                 if (strpos($file, '.php') !== strlen($file) - 4) {
                     continue;
                 }
-
+                
                 if (strpos($file, '[') === 0 && strpos($file, ']') === strlen($file) - 5) {
                     $dynamic_objects[] = $file;
                 }

@@ -245,11 +245,6 @@ class Application
         $url_path = trim($url_path, '/');
         $url_parts = explode('/', $url_path);
 
-        // remove .php from last part
-        if (count($url_parts) > 0 && strpos($url_parts[count($url_parts) - 1], '.php') !== false) {
-            $url_parts[count($url_parts) - 1] = str_replace('.php', '', $url_parts[count($url_parts) - 1]);
-        }
-
         // api or normal routing
         if (count($url_parts) > 0 && $url_parts[0] == 'api') { // TODO: hardcoded
             $router = new Router($this, $this->config['root_directory'], $this->config['api_folder']);
