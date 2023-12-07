@@ -49,25 +49,35 @@ class Router
 
         $output = null;
 
-        foreach ($render_list as $path) {
+        // if not php file, only render last
+        if (strpos($render_list[0], '.php') !== strlen($render_list[0]) - 4) {
+            $output = file_get_contents($render_list[0]);
 
-            extract($this->dynamic_data);
+            // mime type
+            $mime_type = mime_content_type($render_list[0]);
+            header("Content-Type: $mime_type");
+        } else {
+            foreach ($render_list as $path) {
 
-            // Pass children content to parent (for use in layouts)
-            if (isset($output)) {
-                $content = $output;
-            }
+                extract($this->dynamic_data);
 
-            $app = $this->app;
+                // Pass children content to parent (for use in layouts)
+                if (isset($output)) {
+                    $content = $output;
+                }
 
-            if ($take_return) {
-                $output = require $path;
-            } else {
-                ob_start();
-                require $path;
-                $output = ob_get_clean();
+                $app = $this->app;
+
+                if ($take_return) {
+                    $output = require $path;
+                } else {
+                    ob_start();
+                    require $path;
+                    $output = ob_get_clean();
+                }
             }
         }
+
         return $output;
     }
 
@@ -163,7 +173,7 @@ class Router
                 if (strpos($file, '.php') !== strlen($file) - 4) {
                     continue;
                 }
-                
+
                 if (strpos($file, '[') === 0 && strpos($file, ']') === strlen($file) - 5) {
                     $dynamic_objects[] = $file;
                 }
