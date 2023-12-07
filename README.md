@@ -10,6 +10,7 @@ TODO: write
 - [ ] Write better documentation
 - [ ] Write tests
 - [ ] Redo how GET and POST parameters are handled
+- [ ] Router is inconsistent with trailing slash (css and js includes break) - it should redirect to always have trailing slash
 
 ## Publishing
 
