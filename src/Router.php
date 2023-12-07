@@ -53,8 +53,10 @@ class Router
         if (strpos($render_list[0], '.php') !== strlen($render_list[0]) - 4) {
             $output = file_get_contents($render_list[0]);
 
-            // mime type
-            $mime_type = mime_content_type($render_list[0]);
+            $result = new finfo();
+
+            $mime_type = $result->buffer($output, FILEINFO_MIME_TYPE);
+
             header("Content-Type: $mime_type");
         } else {
             foreach ($render_list as $path) {
