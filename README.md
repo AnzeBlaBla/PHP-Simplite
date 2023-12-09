@@ -11,6 +11,7 @@ TODO: write
 - [ ] Write tests
 - [ ] Redo how GET and POST parameters are handled
 - [ ] Router is inconsistent with trailing slash (css and js includes break) - it should redirect to always have trailing slash
+- [ ] Problem if using COMPONENT_ID when replacing some component with a chunk, ID could duplicate
 
 ## Publishing
 

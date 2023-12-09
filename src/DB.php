@@ -107,4 +107,12 @@ class DB {
         return $this->conn->lastInsertId();
     }
 
+    /**
+     * Last error
+     * @return array
+     */
+    public function lastError() {
+        return $this->conn->errorInfo();
+    }
+
 }

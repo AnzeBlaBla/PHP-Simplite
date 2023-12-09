@@ -26,10 +26,10 @@ class ModelBase
     static $_SENSITIVE = [];
 
     /**
-     * Auto increment columns
-     * @var string[]
+     * Auto increment column
+     * @var string
      */
-    static $_AUTO_INCREMENT = ['id'];
+    static $_AUTO_INCREMENT = 'id';
 
 
 
@@ -72,7 +72,9 @@ class ModelBase
         static::checkSchemaVars();
         $table = static::$_TABLE;
         $app = Application::getInstance();
-        $data = $app->db->fetchOne("SELECT * FROM $table WHERE id = ?", [$id]);
+
+        $id_column = static::$_AUTO_INCREMENT;
+        $data = $app->db->fetchOne("SELECT * FROM $table WHERE $id_column = ?", [$id]);
 
         if (!$data) {
             return null;
@@ -115,10 +117,37 @@ class ModelBase
     public function __construct($data = [])
     {
         $this->app = Application::getInstance();
+
+        if (is_array($data)) {
+            $this->constructFromArray($data);
+        } else {
+            $this->constructFromId($data);
+        }
+    }
+
+    private function constructFromArray($data)
+    {
         foreach ($data as $key => $value) {
             $this->$key = $value;
         }
     }
+
+    private function constructFromId($id)
+    {
+        $table = static::$_TABLE;
+        $app = Application::getInstance();
+        $id_column = static::$_AUTO_INCREMENT;
+        $data = $app->db->fetchOne("SELECT * FROM $table WHERE $id_column = ?", [$id]);
+
+        if (!$data) {
+            throw new \Exception("Object with id $id does not exist");
+        }
+
+        foreach ($data as $key => $value) {
+            $this->$key = $value;
+        }
+    }
+
 
     /**
      * Creates a new object in the database from the values in this instance
@@ -135,7 +164,7 @@ class ModelBase
         $placeholders = [];
 
         foreach (static::$_COLUMNS as $column) {
-            if (in_array($column, static::$_AUTO_INCREMENT)) {
+            if ($column === static::$_AUTO_INCREMENT) {
                 continue;
             }
 
@@ -150,7 +179,9 @@ class ModelBase
         $placeholders = implode(', ', $placeholders);
 
         $app->db->execute("INSERT INTO $table ($columns) VALUES ($placeholders)", $values);
-        $this->id = $app->db->lastInsertId();
+        $this->{static::$_AUTO_INCREMENT} = $app->db->lastInsertId();
+        // Get the object from the database
+        $this->constructFromId($this->{static::$_AUTO_INCREMENT});
 
         return $this;
     }
@@ -169,7 +200,7 @@ class ModelBase
         $values = [];
 
         foreach (static::$_COLUMNS as $column) {
-            if (in_array($column, static::$_AUTO_INCREMENT)) {
+            if ($column === static::$_AUTO_INCREMENT) {
                 continue;
             }
 
@@ -179,11 +210,28 @@ class ModelBase
             }
         }
 
-        $values[] = $this->id;
+        $values[] = $this->{static::$_AUTO_INCREMENT};
 
         $columns = implode(', ', $columns);
 
-        $app->db->execute("UPDATE $table SET $columns WHERE id = ?", $values);
+        $id_column = static::$_AUTO_INCREMENT;
+        $app->db->execute("UPDATE $table SET $columns WHERE $id_column = ?", $values);
+
+        return $this;
+    }
+
+    /**
+     * Deletes the object from the database
+     */
+    public function delete()
+    {
+        static::checkSchemaVars();
+
+        $table = static::$_TABLE;
+        $app = Application::getInstance();
+
+        $id_column = static::$_AUTO_INCREMENT;
+        $app->db->execute("DELETE FROM $table WHERE $id_column = ?", [$this->{$id_column}]);
 
         return $this;
     }

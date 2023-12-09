@@ -93,7 +93,10 @@ class Application
             $this->db = DB::getInstance();
         }
 
-        $this->request = new Request();
+        // if running in cli, don't create request
+        if (php_sapi_name() != 'cli') {
+            $this->request = new Request();
+        }
     }
 
     private function validateConfig($config)
