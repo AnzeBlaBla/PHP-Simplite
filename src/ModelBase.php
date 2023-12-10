@@ -69,6 +69,11 @@ class ModelBase
      */
     public static function get($id)
     {
+        // must be numeric
+        if (!is_numeric($id)) {
+            return null;
+        }
+        
         static::checkSchemaVars();
         $table = static::$_TABLE;
         $app = Application::getInstance();
