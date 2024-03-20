@@ -14,6 +14,7 @@ class Request
         $this->method = $_SERVER['REQUEST_METHOD'];
         $this->uri = $_SERVER['REQUEST_URI'];
         $this->query = $_GET;
+        // TODO: could cause a vuln where attacker sends JSON where it's not expected
         if (isset($_SERVER['CONTENT_TYPE']) && $_SERVER['CONTENT_TYPE'] == 'application/json') {
             $this->body = json_decode(file_get_contents('php://input'), true);
         } else {

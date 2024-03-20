@@ -6,6 +6,8 @@ use AnzeBlaBla\Simplite\Application;
 
 define('TYPE_DOC_PROP', 'SimpliteProp');
 define('PK_DOC_PROP', 'SimplitePK');
+define('DEFAULT_DOC_PROP', 'SimpliteDefault');
+define('ON_UPDATE_DOC_PROP', 'SimpliteOnUpdate');
 define('PK_TYPE', 'INT');
 
 function phpTypeToMySQLType($type)
@@ -60,7 +62,7 @@ function simpliteTypeToMySQLType($type)
 function parseDocBlock($doc)
 {
     $matches = [];
-    preg_match_all('/@([a-zA-Z]+)\s*([a-zA-Z]*)/', $doc, $matches);
+    preg_match_all('/@([a-zA-Z]+)\s*([a-zA-Z_-]*)/', $doc, $matches);
     $out = [];
     foreach ($matches[1] as $i => $key) {
         $value = $matches[2][$i];
@@ -233,6 +235,7 @@ class ModelBase
         foreach ($columns as $column) {
             // Find property of the same name
             $type = 'TEXT';
+            $extra = [];
             $rp = new \ReflectionProperty(static::class, $column);
             if ($rp) {
                 // If property exists, get type from docblock (@SimpliteType)
@@ -246,16 +249,39 @@ class ModelBase
                         $type = simpliteTypeToMySQLType($parsed[TYPE_DOC_PROP]);
                     }
                 }
+
+                // If property is not optional, add NOT NULL
+                if (!$rp->hasType() || !$rp->getType()->allowsNull()) {
+                    $extra[] = 'NOT NULL';
+                }
+
+                // If property has a default value, add DEFAULT
+                if (isset($parsed[DEFAULT_DOC_PROP])) {
+                    $extra[] = 'DEFAULT ' . $parsed[DEFAULT_DOC_PROP];
+                }
+
+                // Add ON UPDATE
+                if (isset($parsed[ON_UPDATE_DOC_PROP])) {
+                    $extra[] = 'ON UPDATE ' . $parsed[ON_UPDATE_DOC_PROP];
+                }
             }
-            $statements[] = "$column $type";
 
             if ($column === $id_column) {
                 // if type is not PK_TYPE, throw an error
                 if ($type !== PK_TYPE) {
                     throw new \Exception("Auto increment column must be of type " . PK_TYPE . ", got $type");
                 }
-                $statements[count($statements) - 1] .= ' PRIMARY KEY AUTO_INCREMENT';
+                $extra[] = 'PRIMARY KEY AUTO_INCREMENT';
             }
+
+            if (count($extra) > 0) {
+                $extra = implode(' ', $extra);
+            } else {
+                $extra = '';
+            }
+
+            $statements[] = "$column $type $extra";
+
         }
 
         return "CREATE TABLE $table (" . implode(', ', $statements) . ")";
