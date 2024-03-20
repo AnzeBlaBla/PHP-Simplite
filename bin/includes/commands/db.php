@@ -15,6 +15,7 @@ function handle_db_command($arguments)
     }
 
     $action = $arguments->consume(); // create
+
     $models_folder = $arguments->consume();
 
     switch ($action) {

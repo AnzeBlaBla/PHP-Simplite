@@ -1,16 +1,14 @@
 <?php
 
 $base_path = isset($_composer_autoload_path) ? dirname($_composer_autoload_path) . '/../' : __DIR__ . '/..';
-$bin_dir = isset($_composer_bin_dir) ? $_composer_bin_dir : __DIR__;
 define('BASE_PATH', $base_path);
-define('BIN_DIR', $bin_dir);
 
 include BASE_PATH . '/vendor/autoload.php';
 
-require_once BIN_DIR . '/includes/templates.php';
-require_once BIN_DIR . '/includes/Arguments.php';
-require_once BIN_DIR . '/includes/commands/new.php';
-require_once BIN_DIR . '/includes/commands/db.php';
+require_once __DIR__ . '/includes/templates.php';
+require_once __DIR__ . '/includes/Arguments.php';
+require_once __DIR__ . '/includes/commands/new.php';
+require_once __DIR__ . '/includes/commands/db.php';
 
 /**
  * CLI tool for Simplite

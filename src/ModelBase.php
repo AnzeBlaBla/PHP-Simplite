@@ -238,7 +238,6 @@ class ModelBase
                 // If property exists, get type from docblock (@SimpliteType)
                 $doc = $rp->getDocComment();
                 $parsed = parseDocBlock($doc);
-                print_r($parsed);
                 if ($doc && isset($parsed[TYPE_DOC_PROP])) {
                     if ($parsed[TYPE_DOC_PROP] === true) {
                         // If not specified directly, try to guess type from PHP type
