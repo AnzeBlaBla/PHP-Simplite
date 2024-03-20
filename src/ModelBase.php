@@ -4,6 +4,75 @@ namespace AnzeBlaBla\Simplite;
 
 use AnzeBlaBla\Simplite\Application;
 
+define('TYPE_DOC_PROP', 'SimpliteProp');
+define('PK_DOC_PROP', 'SimplitePK');
+define('PK_TYPE', 'INT');
+
+function phpTypeToMySQLType($type)
+{
+    switch ($type) {
+        case 'int':
+            return 'INT';
+        case 'string':
+            return 'TEXT';
+        case 'float':
+            return 'FLOAT';
+        case 'bool':
+            return 'BOOLEAN';
+        default:
+            throw new \Exception("Unknown type: $type");
+    }
+}
+
+function simpliteTypeToMySQLType($type)
+{
+    switch ($type) {
+        case 'int':
+            return 'INT';
+        case 'string':
+            return 'TEXT';
+        case 'float':
+            return 'FLOAT';
+        case 'bool':
+            return 'BOOLEAN';
+        case 'date':
+            return 'DATE';
+        case 'datetime':
+            return 'DATETIME';
+        case 'time':
+            return 'TIME';
+        case 'timestamp':
+            return 'TIMESTAMP';
+        default:
+            throw new \Exception("Unknown type: $type");
+    }
+}
+
+/**
+ * Parses a docblock for @ annotations (can either contain options or not)
+ * Example 1:
+ * @SimpliteType int
+ * @SimplitePK
+ * 
+ * Example 2:
+ * @SimpliteType
+ */
+function parseDocBlock($doc)
+{
+    $matches = [];
+    preg_match_all('/@([a-zA-Z]+)\s*([a-zA-Z]*)/', $doc, $matches);
+    $out = [];
+    foreach ($matches[1] as $i => $key) {
+        $value = $matches[2][$i];
+        if ($value === '') {
+            $value = true;
+        }
+        $out[$key] = $value;
+    }
+    return $out;
+}
+
+
 class ModelBase
 {
     protected $app;
@@ -12,12 +81,42 @@ class ModelBase
      * The table name
      */
     static $_TABLE = null;
+    static function getTable()
+    {
+        // If table is not null, return it
+        if (static::$_TABLE !== null) {
+            return static::$_TABLE;
+        }
+        // If table is null, return the class name in snake_case, plural // TODO: make this more robust
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', static::class)) . 's';
+    }
 
     /**
      * The columns in the table
      * @var string[]
      */
     static $_COLUMNS = null;
+    static function getColumns()
+    {
+        // If columns is not null, return it
+        if (static::$_COLUMNS !== null) {
+            return static::$_COLUMNS;
+        }
+        // If columns is null, loop all class properties and return the ones that contain the @SimpliteType annotation
+        $columns = [];
+        $reflection = new \ReflectionClass(static::class);
+        foreach ($reflection->getProperties() as $property) {
+            $doc = $property->getDocComment();
+            if ($doc) {
+                $parsed = parseDocBlock($doc);
+                if (isset($parsed[TYPE_DOC_PROP])) {
+                    $columns[] = $property->getName();
+                }
+            }
+        }
+
+        return $columns;
+    }
 
     /**
      * The columns that should not be returned in toArray()
@@ -29,33 +128,39 @@ class ModelBase
      * Auto increment column
      * @var string
      */
-    static $_AUTO_INCREMENT = 'id';
-
-
-
-    /**
-     * Check if the schema variables are defined
-     * @throws \Exception
-     * @return void
-     */
-    static function checkSchemaVars()
+    static $_AUTO_INCREMENT = null;
+    public static function getAutoIncrementColumn()
     {
-        if (static::$_TABLE === null) {
-            throw new \Exception('Please define $_TABLE in your model for ' . static::class);
+        if (static::$_AUTO_INCREMENT === null) {
+            return 'id';
         }
-        if (static::$_COLUMNS === null) {
-            throw new \Exception('Please define $_COLUMNS in your model for ' . static::class);
+
+        // Try to find property with PK_DOC_PROP
+        $reflection = new \ReflectionClass(static::class);
+        foreach ($reflection->getProperties() as $property) {
+            $doc = $property->getDocComment();
+            if ($doc) {
+                $parsed = parseDocBlock($doc);
+                if (isset($parsed[PK_DOC_PROP])) {
+                    // Set the auto increment column to the property name
+                    static::$_AUTO_INCREMENT = $property->getName();
+                    return static::$_AUTO_INCREMENT;
+                }
+            }
         }
+
+        return static::$_AUTO_INCREMENT;
     }
+
+
+
 
     /**
      * Get all objects
      */
     public static function all()
     {
-        static::checkSchemaVars();
-
-        $table = static::$_TABLE;
+        $table = static::getTable();
         $app = Application::getInstance();
         $data = $app->db->fetchAll("SELECT * FROM $table");
 
@@ -73,12 +178,11 @@ class ModelBase
         if (!is_numeric($id)) {
             return null;
         }
-        
-        static::checkSchemaVars();
-        $table = static::$_TABLE;
+
+        $table = static::getTable();
         $app = Application::getInstance();
 
-        $id_column = static::$_AUTO_INCREMENT;
+        $id_column = static::getAutoIncrementColumn();
         $data = $app->db->fetchOne("SELECT * FROM $table WHERE $id_column = ?", [$id]);
 
         if (!$data) {
@@ -92,11 +196,9 @@ class ModelBase
      */
     public static function find($query, $params = [])
     {
-        static::checkSchemaVars();
-
         $app = Application::getInstance();
 
-        $table = static::$_TABLE;
+        $table = static::getTable();
         $data = $app->db->fetchAll("SELECT * FROM $table WHERE $query", $params);
 
         return static::constructMany($data);
@@ -114,6 +216,50 @@ class ModelBase
             $objects[] = new static($row);
         }
         return $objects;
+    }
+
+    /**
+     * Get the CREATE TABLE statement for this model. Not meant to be called directly (use db create command instead)
+     * @return string
+     * @throws \Exception
+     */
+    public static function _getCreateTableStatement()
+    {
+        $table = static::getTable();
+        $columns = static::getColumns();
+        $id_column = static::getAutoIncrementColumn();
+
+        $statements = [];
+        foreach ($columns as $column) {
+            // Find property of the same name
+            $type = 'TEXT';
+            $rp = new \ReflectionProperty(static::class, $column);
+            if ($rp) {
+                // If property exists, get type from docblock (@SimpliteType)
+                $doc = $rp->getDocComment();
+                $parsed = parseDocBlock($doc);
+                print_r($parsed);
+                if ($doc && isset($parsed[TYPE_DOC_PROP])) {
+                    if ($parsed[TYPE_DOC_PROP] === true) {
+                        // If not specified directly, try to guess type from PHP type
+                        $type = phpTypeToMySQLType($rp->getType()->getName());
+                    } else {
+                        $type = simpliteTypeToMySQLType($parsed[TYPE_DOC_PROP]);
+                    }
+                }
+            }
+            $statements[] = "$column $type";
+
+            if ($column === $id_column) {
+                // if type is not PK_TYPE, throw an error
+                if ($type !== PK_TYPE) {
+                    throw new \Exception("Auto increment column must be of type " . PK_TYPE . ", got $type");
+                }
+                $statements[count($statements) - 1] .= ' PRIMARY KEY AUTO_INCREMENT';
+            }
+        }
+
+        return "CREATE TABLE $table (" . implode(', ', $statements) . ")";
     }
 
 
@@ -139,9 +285,9 @@ class ModelBase
 
     private function constructFromId($id)
     {
-        $table = static::$_TABLE;
+        $table = static::getTable();
         $app = Application::getInstance();
-        $id_column = static::$_AUTO_INCREMENT;
+        $id_column = static::getAutoIncrementColumn();
         $data = $app->db->fetchOne("SELECT * FROM $table WHERE $id_column = ?", [$id]);
 
         if (!$data) {
@@ -159,17 +305,15 @@ class ModelBase
      */
     public function create()
     {
-        static::checkSchemaVars();
-
-        $table = static::$_TABLE;
+        $table = static::getTable();
         $app = Application::getInstance();
 
         $columns = [];
         $values = [];
         $placeholders = [];
 
-        foreach (static::$_COLUMNS as $column) {
-            if ($column === static::$_AUTO_INCREMENT) {
+        foreach (static::getColumns() as $column) {
+            if ($column === static::getAutoIncrementColumn()) {
                 continue;
             }
 
@@ -184,9 +328,9 @@ class ModelBase
         $placeholders = implode(', ', $placeholders);
 
         $app->db->execute("INSERT INTO $table ($columns) VALUES ($placeholders)", $values);
-        $this->{static::$_AUTO_INCREMENT} = $app->db->lastInsertId();
+        $this->{static::getAutoIncrementColumn()} = $app->db->lastInsertId();
         // Get the object from the database
-        $this->constructFromId($this->{static::$_AUTO_INCREMENT});
+        $this->constructFromId($this->{static::getAutoIncrementColumn()});
 
         return $this;
     }
@@ -196,16 +340,15 @@ class ModelBase
      */
     public function update()
     {
-        static::checkSchemaVars();
 
-        $table = static::$_TABLE;
+        $table = static::getTable();
         $app = Application::getInstance();
 
         $columns = [];
         $values = [];
 
-        foreach (static::$_COLUMNS as $column) {
-            if ($column === static::$_AUTO_INCREMENT) {
+        foreach (static::getColumns() as $column) {
+            if ($column === static::getAutoIncrementColumn()) {
                 continue;
             }
 
@@ -215,11 +358,11 @@ class ModelBase
             }
         }
 
-        $values[] = $this->{static::$_AUTO_INCREMENT};
+        $values[] = $this->{static::getAutoIncrementColumn()};
 
         $columns = implode(', ', $columns);
 
-        $id_column = static::$_AUTO_INCREMENT;
+        $id_column = static::getAutoIncrementColumn();
         $app->db->execute("UPDATE $table SET $columns WHERE $id_column = ?", $values);
 
         return $this;
@@ -230,12 +373,10 @@ class ModelBase
      */
     public function delete()
     {
-        static::checkSchemaVars();
-
-        $table = static::$_TABLE;
+        $table = static::getTable();
         $app = Application::getInstance();
 
-        $id_column = static::$_AUTO_INCREMENT;
+        $id_column = static::getAutoIncrementColumn();
         $app->db->execute("DELETE FROM $table WHERE $id_column = ?", [$this->{$id_column}]);
 
         return $this;
@@ -246,10 +387,8 @@ class ModelBase
      */
     public function toArray()
     {
-        static::checkSchemaVars();
-
         $out = [];
-        foreach (static::$_COLUMNS as $key) {
+        foreach (static::getColumns() as $key) {
             if (!in_array($key, static::$_SENSITIVE)) {
                 $out[$key] = $this->$key;
             }
