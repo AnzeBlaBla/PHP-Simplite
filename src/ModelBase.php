@@ -64,7 +64,7 @@ function simpliteTypeToMySQLType($type)
 function parseDocBlock($doc)
 {
     $matches = [];
-    preg_match_all('/@([a-zA-Z]+)\s*([a-zA-Z_-]*)/', $doc, $matches);
+    preg_match_all('/@([a-zA-Z]+)\s*([0-9a-zA-Z_\-\(\)]*)/', $doc, $matches);
     $out = [];
     foreach ($matches[1] as $i => $key) {
         $value = $matches[2][$i];
