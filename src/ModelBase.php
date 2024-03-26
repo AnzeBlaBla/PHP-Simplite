@@ -22,7 +22,8 @@ function phpTypeToMySQLType($type)
         case 'bool':
             return 'BOOLEAN';
         default:
-            throw new \Exception("Unknown type: $type");
+            // TODO: warning
+            return $type;
     }
 }
 
@@ -46,7 +47,8 @@ function simpliteTypeToMySQLType($type)
         case 'timestamp':
             return 'TIMESTAMP';
         default:
-            throw new \Exception("Unknown type: $type");
+            // TODO: warning
+            return $type;
     }
 }
 
