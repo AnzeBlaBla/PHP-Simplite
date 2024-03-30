@@ -24,13 +24,10 @@ class Renderer
      */
     private static function nextComponentId()
     {
-        // Convert request time to hex
-        $time = dechex(time());
-        // Get last 6 characters
-        $time = substr($time, -6);
-        
+        // Convert request time to hex (so it's the same for all components on the same request)
+        $timeHex = dechex($_SERVER['REQUEST_TIME_FLOAT']);        
 
-        return 'SIMPLITE_' . $time . self::$component_index++;
+        return 'SIMPLITE_' . $timeHex . self::$component_index++;
     }
 
 
