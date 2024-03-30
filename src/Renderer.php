@@ -91,7 +91,7 @@ class Renderer
             ob_end_clean();
 
             // If wrapping is enabled, wrap the component in comments
-            if ($app->getConfig('wrap_components')) {
+            if ($app->getConfig('component_comments')) {
                 $output = "<!-- BEGIN COMPONENT: $file (ID: $COMPONENT_ID) -->\n" . $output . "\n<!-- END COMPONENT: $file (ID: $COMPONENT_ID) -->";
             }
 
