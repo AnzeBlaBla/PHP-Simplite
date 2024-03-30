@@ -25,7 +25,9 @@ class Renderer
     private static function nextComponentId()
     {
         // Convert request time to hex (so it's the same for all components on the same request)
-        $timeHex = dechex($_SERVER['REQUEST_TIME_FLOAT']);        
+        $time_float = $_SERVER['REQUEST_TIME_FLOAT'];
+        $time_int = intval($time_float * 1000);
+        $timeHex = dechex($time_int);      
 
         return 'SIMPLITE_' . $timeHex . self::$component_index++;
     }
