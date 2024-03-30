@@ -22,7 +22,8 @@ function phpTypeToMySQLType($type)
         case 'bool':
             return 'BOOLEAN';
         default:
-            throw new \Exception("Unknown type: $type");
+            // TODO: warning
+            return $type;
     }
 }
 
@@ -46,7 +47,8 @@ function simpliteTypeToMySQLType($type)
         case 'timestamp':
             return 'TIMESTAMP';
         default:
-            throw new \Exception("Unknown type: $type");
+            // TODO: warning
+            return $type;
     }
 }
 
@@ -62,7 +64,7 @@ function simpliteTypeToMySQLType($type)
 function parseDocBlock($doc)
 {
     $matches = [];
-    preg_match_all('/@([a-zA-Z]+)\s*([a-zA-Z_-]*)/', $doc, $matches);
+    preg_match_all('/@([a-zA-Z]+)\s*([0-9a-zA-Z_\-\(\)]*)/', $doc, $matches);
     $out = [];
     foreach ($matches[1] as $i => $key) {
         $value = $matches[2][$i];
@@ -196,12 +198,12 @@ class ModelBase
     /**
      * Get objects by query
      */
-    public static function find($query, $params = [])
+    public static function find($query, $params = [], $extra = '')
     {
         $app = Application::getInstance();
 
         $table = static::getTable();
-        $data = $app->db->fetchAll("SELECT * FROM $table WHERE $query", $params);
+        $data = $app->db->fetchAll("SELECT * FROM $table WHERE $query $extra", $params);
 
         return static::constructMany($data);
     }
