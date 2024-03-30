@@ -73,6 +73,7 @@ class Application
             'api_folder' => 'api',
             'components_folder' => 'components',
             'translations' => [],
+            'component_comments' => false, // If true, components will be wrapped in '<!-- BEGIN COMPONENT -->' and '<!-- END COMPONENT -->'
             // db (optional) { host, dbname, username, password }
         ]);
 

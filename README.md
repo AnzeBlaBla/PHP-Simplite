@@ -53,7 +53,8 @@ $app = new Application([
         'dbname' => $_ENV['MYSQL_DATABASE'],
         'username' => $_ENV['MYSQL_USER'],
         'password' => $_ENV['MYSQL_PASSWORD'],
-    ]
+    ],
+    'component_comments' => true, // wrap components in HTML comments
 ]);
 
 $app->addContext([
