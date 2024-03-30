@@ -92,7 +92,7 @@ class Renderer
 
             // If wrapping is enabled, wrap the component in comments
             if ($app->getConfig('wrap_components')) {
-                $output = "<!-- BEGIN COMPONENT: $file -->\n" . $output . "\n<!-- END COMPONENT: $file -->";
+                $output = "<!-- BEGIN COMPONENT: $file (ID: $COMPONENT_ID) -->\n" . $output . "\n<!-- END COMPONENT: $file (ID: $COMPONENT_ID) -->";
             }
 
             return [
