@@ -91,8 +91,18 @@ class ModelBase
         if (static::$_TABLE !== null) {
             return static::$_TABLE;
         }
-        // If table is null, return the class name in snake_case, plural // TODO: make this more robust
-        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', static::class)) . 's';
+        // If table is null, return the class name in snake_case, plural 
+        $tablename_singular = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', static::class));
+
+        // TODO: make this more robust
+        $last_char = substr($tablename_singular, -1);
+        if ($last_char === 's' || $last_char === 'x' || $last_char === 'z' || $last_char === 'o' || $last_char === 'ch' || $last_char === 'sh') {
+            return $tablename_singular . 'es';
+        } else if ($last_char === 'y' && !in_array(substr($tablename_singular, -2, 1), ['a', 'e', 'i', 'o', 'u'])) {
+            return substr($tablename_singular, 0, -1) . 'ies';
+        } else {
+            return $tablename_singular . 's';
+        }
     }
 
     /**
