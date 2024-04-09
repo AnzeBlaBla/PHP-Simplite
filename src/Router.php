@@ -40,12 +40,13 @@ class Router
      */
     public function render($url_parts, $take_return = false)
     {
-        // a hack to search the subfolder for layout, otherwise it's not done, because it looks only for the exact file or dir
+        // HACK: search the subfolder for layout, otherwise it's not done, because it looks only for the exact file or dir
         // adds $router_subfolder to the beginning of the url_parts
         array_unshift($url_parts, $this->router_subfolder);
         $this->url_parts = $url_parts;
         $this->current_path = $this->root_directory;
         $this->render_list = [];
+
 
         $render_list = $this->getRenderList();
 
@@ -54,44 +55,59 @@ class Router
             throw new \Exception("No files to render");
         }
 
-        // reverse list
-        $render_list = array_reverse($render_list);
-
         $output = null;
 
-        // if not php file, only render last
-        if (strpos($render_list[0], '.php') !== strlen($render_list[0]) - 4) {
-            $output = file_get_contents($render_list[0]);
+        $inner_most_file = $render_list[count($render_list) - 1];
 
-            $extension = pathinfo($render_list[0], PATHINFO_EXTENSION);
+        // if not php file, only render last
+        if (strpos($inner_most_file, '.php') !== strlen($inner_most_file) - 4) {
+            $output = file_get_contents($inner_most_file);
+
+            $extension = pathinfo($inner_most_file, PATHINFO_EXTENSION);
 
             if (isset(EXTENSIONS_MAP[$extension])) {
                 $mime_type = EXTENSIONS_MAP[$extension];
             } else {
                 $finfo = new finfo(FILEINFO_MIME_TYPE);
-                $mime_type = $finfo->file($render_list[0]);
+                $mime_type = $finfo->file($inner_most_file);
             }
 
             header("Content-Type: $mime_type");
         } else {
-            foreach ($render_list as $path) {
+            $output = $this->renderRenderList($render_list, $take_return);
+        }
 
-                extract($this->dynamic_data);
+        return $output;
+    }
 
-                // Pass children content to parent (for use in layouts)
-                if (isset($output)) {
-                    $content = $output;
-                }
+    /**
+     * Renders the list of files
+     * @param $render_list - list of files to render
+     * @param $take_return - if `true`, uses return value of file (API), otherwise uses it's output (page - HTML)
+     */
+    private function renderRenderList($render_list, $take_return = false)
+    {
+        $output = null;
+        
+        foreach ($render_list as $path) {
 
-                $app = $this->app;
+            // Pass dynamic data to the file            
+            extract($this->dynamic_data);
 
-                if ($take_return) {
-                    $output = require $path;
-                } else {
-                    ob_start();
-                    require $path;
-                    $output = ob_get_clean();
-                }
+            // Pass children content to parent (for use in layouts)
+            if (isset($output)) {
+                $content = $output;
+            }
+
+            // Pass app instance to the file
+            $app = $this->app;
+
+            if ($take_return) {
+                $output = require $path;
+            } else {
+                ob_start();
+                require $path;
+                $output = ob_get_clean();
             }
         }
 
@@ -104,6 +120,11 @@ class Router
         throw new \Exception($error);
     }
 
+    /**
+     * Returns the list of files to render. First file in the list is the top-most file in the hierarchy (for example, the outer-most layout)
+     * @return array
+     * @throws \Exception
+     */
     private function getRenderList(): array
     {
         // handle exit condition
