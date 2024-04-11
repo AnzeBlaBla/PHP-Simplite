@@ -87,17 +87,14 @@ class Router
      */
     private function renderRenderList($render_list, $take_return = false)
     {
-        $output = null;
+        $rendered_parts = [];
+
+        $content = $this->getPlaceholder();
         
         foreach ($render_list as $path) {
 
             // Pass dynamic data to the file            
-            extract($this->dynamic_data);
-
-            // Pass children content to parent (for use in layouts)
-            if (isset($output)) {
-                $content = $output;
-            }
+            extract($this->dynamic_data);            
 
             // Pass app instance to the file
             $app = $this->app;
@@ -109,9 +106,33 @@ class Router
                 require $path;
                 $output = ob_get_clean();
             }
+
+            $rendered_parts[] = $output;
         }
 
-        return $output;
+        
+        // replace placeholders with content (starting from the inner-most file)
+        $content = $rendered_parts[count($rendered_parts) - 1];
+        for ($i = count($rendered_parts) - 2; $i >= 0; $i--) {
+            $content = str_replace($this->getPlaceholder(), $rendered_parts[$i], $content);
+        }
+
+        return $content;
+
+    }
+
+    /**
+     * Generates a unique placeholder for dynamic content.
+     * It's always the same for the same request to decrease the chance of conflicts.
+     * @return string
+     * @throws \Exception
+     */
+    public function getPlaceholder()
+    {
+        $time_float = $_SERVER['REQUEST_TIME_FLOAT'];
+        $time_int = intval($time_float * 1000);
+
+        return '<CONTENT_PLACEHOLDER_' . $time_int . '>';
     }
 
     public static function make404($error = "Page not found")
