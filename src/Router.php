@@ -112,8 +112,8 @@ class Router
 
         
         // replace placeholders with content (starting from the inner-most file)
-        $content = $rendered_parts[count($rendered_parts) - 1];
-        for ($i = count($rendered_parts) - 2; $i >= 0; $i--) {
+        $content = $rendered_parts[0];
+        for ($i = 1; $i < count($rendered_parts); $i++) {
             $content = str_replace($this->getPlaceholder(), $rendered_parts[$i], $content);
         }
 
