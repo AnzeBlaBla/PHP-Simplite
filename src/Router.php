@@ -115,14 +115,9 @@ class Router
         // replace placeholders with content (starting from the inner-most file)
         $actualContent = $rendered_parts[0];
 
-        // if $take_return, we need to replace the placeholder inside the object
+        // if $take_return, we only need the last part
         if ($take_return) {
-            // HACK: we use json stringification to do this, can be done better
-            $actualContent = json_encode($actualContent);
-            for ($i = 1; $i < count($rendered_parts); $i++) {
-                $actualContent = str_replace($content, json_encode($rendered_parts[$i]), $actualContent);
-            }
-            $actualContent = json_decode($actualContent);
+            $actualContent = $rendered_parts[count($rendered_parts) - 1];
         } else {
             for ($i = 1; $i < count($rendered_parts); $i++) {
                 $actualContent = str_replace($content, $rendered_parts[$i], $actualContent);
