@@ -89,6 +89,7 @@ class Router
     {
         $rendered_parts = [];
 
+        // Content passed down to the files (dynamic data - actually placeholder)
         $content = $this->getPlaceholder();
         
         foreach ($render_list as $path) {
@@ -100,24 +101,25 @@ class Router
             $app = $this->app;
 
             if ($take_return) {
-                $output = require $path;
+                $rendered_part = require $path;
             } else {
                 ob_start();
                 require $path;
-                $output = ob_get_clean();
+                $rendered_part = ob_get_clean();
             }
 
-            $rendered_parts[] = $output;
+            $rendered_parts[] = $rendered_part;
         }
 
         
         // replace placeholders with content (starting from the inner-most file)
-        $content = $rendered_parts[0];
+        $actualContent = $rendered_parts[0];
+
         for ($i = 1; $i < count($rendered_parts); $i++) {
-            $content = str_replace($this->getPlaceholder(), $rendered_parts[$i], $content);
+            $actualContent = str_replace($content, $rendered_parts[$i], $actualContent);
         }
 
-        return $content;
+        return $actualContent;
 
     }
 
