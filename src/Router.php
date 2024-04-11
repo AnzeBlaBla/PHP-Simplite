@@ -91,11 +91,11 @@ class Router
 
         // Content passed down to the files (dynamic data - actually placeholder)
         $content = $this->getPlaceholder();
-        
+
         foreach ($render_list as $path) {
 
             // Pass dynamic data to the file            
-            extract($this->dynamic_data);            
+            extract($this->dynamic_data);
 
             // Pass app instance to the file
             $app = $this->app;
@@ -111,16 +111,26 @@ class Router
             $rendered_parts[] = $rendered_part;
         }
 
-        
+
         // replace placeholders with content (starting from the inner-most file)
         $actualContent = $rendered_parts[0];
 
-        for ($i = 1; $i < count($rendered_parts); $i++) {
-            $actualContent = str_replace($content, $rendered_parts[$i], $actualContent);
+        // if $take_return, we need to replace the placeholder inside the object
+        if ($take_return) {
+            // HACK: we use json stringification to do this, can be done better
+            $actualContent = json_encode($actualContent);
+            for ($i = 1; $i < count($rendered_parts); $i++) {
+                $actualContent = str_replace($content, json_encode($rendered_parts[$i]), $actualContent);
+            }
+            $actualContent = json_decode($actualContent);
+        } else {
+            for ($i = 1; $i < count($rendered_parts); $i++) {
+                $actualContent = str_replace($content, $rendered_parts[$i], $actualContent);
+            }
         }
 
-        return $actualContent;
 
+        return $actualContent;
     }
 
     /**
@@ -191,7 +201,6 @@ class Router
             $this->current_path .= '/' . $current_url_part;
 
             return $this->getRenderList();
-
         } else if ($dynamic_obj = $this->getDynamic($this->current_path)) { // if dynamic part exists
 
             if ($dynamic_obj["type"] == "file") {
