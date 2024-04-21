@@ -457,10 +457,15 @@ class ModelBase
             $last_id = $this->{$ai_column};
         }
 
-        $this->{$ai_column} = $last_id;
+        if ($ai_column)
+            $this->{$ai_column} = $last_id;
         
         // Get the object from the database
-        $this->constructFromPK($this->{static::getPrimaryKeyColumn()});
+        try {
+            $this->constructFromPK($this->{static::getPrimaryKeyColumn()});
+        } catch (\Exception $e) {
+            throw new \Exception("Could not retrieve object from database after creation (primary key: " . $this->{static::getPrimaryKeyColumn()} . ", last insert id: $last_id)");
+        }
 
         return $this;
     }
