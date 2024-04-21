@@ -237,6 +237,19 @@ class ModelBase
     }
 
     /**
+     * Check if exists
+     * @param string $query
+     * @param array $params
+     * @param string $extra
+     * @return bool
+     */
+    public static function exists($query, $params = [], $extra = '')
+    {
+        return count(static::find($query, $params, $extra)) > 0;
+    }
+
+
+    /**
      * Construct array of objects from array of data
      * @param array $data
      * @return static[]
