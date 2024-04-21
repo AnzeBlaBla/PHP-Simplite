@@ -6,10 +6,14 @@ use AnzeBlaBla\Simplite\Application;
 
 define('TYPE_DOC_PROP', 'SimpliteProp');
 define('PK_DOC_PROP', 'SimplitePK');
+define('FK_DOC_PROP', 'SimpliteFK'); // TODO: implement FK on query level
+define('FK_ON_DELETE_DOC_PROP', 'SimpliteFKOnDelete');
+define('FK_ON_UPDATE_DOC_PROP', 'SimpliteFKOnUpdate');
 define('AUTO_INCREMENT_DOC_PROP', 'SimpliteAutoIncrement');
 define('DEFAULT_DOC_PROP', 'SimpliteDefault');
 define('ON_UPDATE_DOC_PROP', 'SimpliteOnUpdate');
-define('PK_TYPE', 'INT');
+
+// TODO: implement upsert
 
 function phpTypeToMySQLType($type)
 {
@@ -250,8 +254,13 @@ class ModelBase
     }
 
     /**
-     * Get the CREATE TABLE statement for this model. Not meant to be called directly (use db create command instead)
-     * @return string
+     * Get the CREATE TABLE statement for this model. Not meant to be called directly (use db create command instead).
+     * Returns an object with the following structure:
+     * [
+     *    'create' => 'CREATE TABLE ...',
+     *   'foreign_keys' => ['FOREIGN KEY ...', ...]
+     * ]
+     * @return array
      * @throws \Exception
      */
     public static function _getCreateTableStatement()
@@ -262,6 +271,7 @@ class ModelBase
         $ai_column = static::getAutoIncrementColumn();
 
         $statements = [];
+        $foreign_keys = [];
         foreach ($columns as $column) {
             // Find property of the same name
             $type = 'TEXT';
@@ -277,6 +287,47 @@ class ModelBase
                         $type = phpTypeToMySQLType($rp->getType()->getName());
                     } else {
                         $type = simpliteTypeToMySQLType($parsed[TYPE_DOC_PROP]);
+                    }
+
+                    // If property is foreign key, add FOREIGN KEY
+                    if (isset($parsed[FK_DOC_PROP])) {
+                        $fk_value = $parsed[FK_DOC_PROP];
+                        // Value is in the syntax ClassName{.column} where column is optional, if not specified, use primary key
+                        $fk_parts = explode('.', $fk_value);
+                        $fk_table = $fk_parts[0];
+                        $fk_column = $fk_parts[1] ?? null;
+                        // Get static instance of the foreign table using reflection
+                        try {
+                            $fk_class = new \ReflectionClass($fk_table);
+                        } catch (\ReflectionException $e) {
+                            // Throw exception with current class name
+                            throw new \Exception("Foreign key class $fk_table does not exist or is not a subclass of " . ModelBase::class . " in " . static::class);
+                        }
+                        if (!$fk_class->isSubclassOf(ModelBase::class)) {
+                            throw new \Exception("Foreign key class $fk_table does not exist or is not a subclass of " . ModelBase::class);
+                        }
+
+                        $fk_table = $fk_class->getMethod('getTable')->invoke(null);
+                        $fk_column = $fk_column ?? $fk_class->getMethod('getPrimaryKeyColumn')->invoke(null);
+
+                        // On delete and on update
+                        $deleteUpdate = [];
+
+                        if (isset($parsed[FK_ON_DELETE_DOC_PROP])) {
+                            $deleteUpdate[] = 'ON DELETE ' . $parsed[FK_ON_DELETE_DOC_PROP];
+                        }
+
+                        if (isset($parsed[FK_ON_UPDATE_DOC_PROP])) {
+                            $deleteUpdate[] = 'ON UPDATE ' . $parsed[FK_ON_UPDATE_DOC_PROP];
+                        }
+
+                        if (count($deleteUpdate) > 0) {
+                            $deleteUpdate = ' ' . implode(' ', $deleteUpdate);
+                        } else {
+                            $deleteUpdate = '';
+                        }
+
+                        $foreign_keys[] = "ALTER TABLE $table ADD FOREIGN KEY ($column) REFERENCES $fk_table($fk_column)$deleteUpdate";
                     }
                 }
 
@@ -315,7 +366,11 @@ class ModelBase
             $statements[] = "$column $type $extra";
         }
 
-        return "CREATE TABLE $table (" . implode(', ', $statements) . ")";
+
+        return [
+            'create' => "CREATE TABLE $table (" . implode(', ', $statements) . ")",
+            'foreign_keys' => $foreign_keys
+        ];
     }
 
 

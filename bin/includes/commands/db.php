@@ -33,9 +33,18 @@ function handle_db_command($arguments)
             echo "Found " . count($children) . " models\n";
 
             $statements = [];
+            $foreign_keys = [];
 
             foreach ($children as $child) {
-                $statements[] = $child::_getCreateTableStatement();
+                $out_statements = $child::_getCreateTableStatement();
+
+                $foreign_keys = array_merge($foreign_keys, $out_statements['foreign_keys']);
+                $statements[] = $out_statements['create'];
+            }
+
+            // Add alter table statements for foreign keys
+            foreach ($foreign_keys as $foreign_key) {
+                $statements[] = $foreign_key;
             }
 
             $statements = implode(";\n", $statements) . ";";
