@@ -450,7 +450,18 @@ class ModelBase
         $placeholders = implode(', ', $placeholders);
 
         $app->db->execute("INSERT INTO $table ($columns) VALUES ($placeholders)", $values);
-        $this->{static::getPrimaryKeyColumn()} = $app->db->lastInsertId();
+
+        // If our auto increment column was set (and inserted), lastInsertId will NOT return it (it will return 0)
+        // We need to get it from the object
+        $last_id = $app->db->lastInsertId();
+
+        $ai_column = static::getAutoIncrementColumn();
+        if ($ai_column && isset($this->{$ai_column})) {
+            $last_id = $this->{$ai_column};
+        }
+
+        $this->{$ai_column} = $last_id;
+        
         // Get the object from the database
         $this->constructFromPK($this->{static::getPrimaryKeyColumn()});
 

@@ -103,8 +103,8 @@ class DB {
         $this->execute($sql, $values);
     }
 
-    public function lastInsertId() {
-        return $this->conn->lastInsertId();
+    public function lastInsertId($name = null) {
+        return $this->conn->lastInsertId($name);
     }
 
     /**
