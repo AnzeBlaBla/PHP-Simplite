@@ -82,7 +82,7 @@ function parseDocBlock($doc)
 }
 
 
-class ModelBase
+class ModelBase implements \JsonSerializable
 {
     protected $app;
 
@@ -555,5 +555,10 @@ class ModelBase
             }
         }
         return $out;
+    }
+
+    public function jsonSerialize()
+    {
+        return $this->toArray();
     }
 }
