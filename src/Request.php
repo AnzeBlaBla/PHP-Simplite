@@ -4,9 +4,21 @@ namespace AnzeBlaBla\Simplite;
 
 class Request
 {
+    /**
+     * @var string Request method
+     */
     public $method;
+    /**
+     * @var string Request URI
+     */
     public $uri;
+    /**
+     * @var array Query parameters
+     */
     public $query;
+    /**
+     * @var array Request body
+     */
     private $body;
 
     public function __construct()
@@ -24,6 +36,8 @@ class Request
 
     /**
      * Gets request data (body)
+     * @param array $required_keys
+     * @return array
      */
     public function body($required_keys = [])
     {
@@ -37,6 +51,11 @@ class Request
         return $this->body;
     }
 
+    /**
+     * Checks if request has body data
+     * @param string|array $key
+     * @return bool
+     */
     public function hasBody($key = null)
     {
         if ($key) {
