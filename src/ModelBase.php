@@ -522,11 +522,63 @@ class ModelBase implements \JsonSerializable
      */
     public function upsert()
     {
-        if ($this->{static::getPrimaryKeyColumn()} && static::get($this->{static::getPrimaryKeyColumn()}) !== null) {
-            return $this->update();
-        } else {
-            return $this->create();
+        // Construct INSERT + ON DUPLICATE KEY UPDATE statement
+
+        $table = static::getTable();
+        $app = Application::getInstance();
+
+        $columns = [];
+        $values = [];
+        $placeholders = [];
+
+        foreach (static::getColumns() as $column) {
+            if (isset($this->$column)) {
+                $columns[] = $column;
+                $values[] = $this->$column;
+                $placeholders[] = '?';
+            }
         }
+
+        $columns = implode(', ', $columns);
+        $placeholders = implode(', ', $placeholders);
+
+        $on_duplicate = [];
+        foreach (static::getColumns() as $column) {
+            if ($column === static::getPrimaryKeyColumn()) {
+                continue;
+            }
+
+            if (isset($this->$column)) {
+                $on_duplicate[] = "$column = ?";
+                $values[] = $this->$column;
+            }
+        }
+
+        $on_duplicate = implode(', ', $on_duplicate);
+
+        $app->db->execute("INSERT INTO $table ($columns) VALUES ($placeholders) ON DUPLICATE KEY UPDATE $on_duplicate", $values);
+
+        // If our auto increment column was set (and inserted), lastInsertId will NOT return it (it will return 0)
+        // We need to get it from the object
+
+        $ai_column = static::getAutoIncrementColumn();
+        if ($ai_column && isset($this->{$ai_column})) {
+            $last_id = $this->{$ai_column};
+        } else {
+            $last_id = $app->db->lastInsertId();
+        }
+
+        if ($ai_column)
+            $this->{$ai_column} = $last_id;
+
+        // Get the object from the database
+        try {
+            $this->constructFromPK($this->{static::getPrimaryKeyColumn()});
+        } catch (\Exception $e) {
+            throw new \Exception("Could not retrieve object from database after creation (primary key: " . $this->{static::getPrimaryKeyColumn()} . ", last insert id: $last_id)");
+        }
+
+        return $this;
     }
 
     /**
