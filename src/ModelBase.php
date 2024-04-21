@@ -336,6 +336,23 @@ class ModelBase
         }
     }
 
+    /**
+     * Creates many objects from an array of data
+     * @param array $data
+     * @return static[]
+     */
+    public static function createMany($data)
+    {
+        $objects = [];
+        foreach ($data as $row) {
+            $newObj = new static($row);
+            $newObj->create();
+
+            $objects[] = $newObj;
+        }
+        return $objects;
+    }
+
 
     /**
      * Creates a new object in the database from the values in this instance
