@@ -6,6 +6,7 @@ use AnzeBlaBla\Simplite\Application;
 
 define('TYPE_DOC_PROP', 'SimpliteProp');
 define('PK_DOC_PROP', 'SimplitePK');
+define('AUTO_INCREMENT_DOC_PROP', 'SimpliteAutoIncrement');
 define('DEFAULT_DOC_PROP', 'SimpliteDefault');
 define('ON_UPDATE_DOC_PROP', 'SimpliteOnUpdate');
 define('PK_TYPE', 'INT');
@@ -139,16 +140,12 @@ class ModelBase
     static $_SENSITIVE = [];
 
     /**
-     * Auto increment column
+     * Primary key column
      * @var string
      */
-    static $_AUTO_INCREMENT = null;
-    public static function getAutoIncrementColumn()
+    static $_PRIMARY_KEY_COLUMN = null;
+    public static function getPrimaryKeyColumn()
     {
-        if (static::$_AUTO_INCREMENT === null) {
-            return 'id';
-        }
-
         // Try to find property with PK_DOC_PROP
         $reflection = new \ReflectionClass(static::class);
         foreach ($reflection->getProperties() as $property) {
@@ -156,17 +153,39 @@ class ModelBase
             if ($doc) {
                 $parsed = parseDocBlock($doc);
                 if (isset($parsed[PK_DOC_PROP])) {
-                    // Set the auto increment column to the property name
-                    static::$_AUTO_INCREMENT = $property->getName();
-                    return static::$_AUTO_INCREMENT;
+                    // Set the primary key column to the property name
+                    static::$_PRIMARY_KEY_COLUMN = $property->getName();
+                    return static::$_PRIMARY_KEY_COLUMN;
                 }
             }
         }
 
-        return static::$_AUTO_INCREMENT;
+        return static::$_PRIMARY_KEY_COLUMN;
     }
 
+    /**
+     * Auto increment column
+     * @var string
+     */
+    static $_AUTO_INCREMENT_COLUMN = null;
+    public static function getAutoIncrementColumn()
+    {
+        // Try to find property with AUTO_INCREMENT_DOC_PROP
+        $reflection = new \ReflectionClass(static::class);
+        foreach ($reflection->getProperties() as $property) {
+            $doc = $property->getDocComment();
+            if ($doc) {
+                $parsed = parseDocBlock($doc);
+                if (isset($parsed[AUTO_INCREMENT_DOC_PROP])) {
+                    // Set the auto increment column to the property name
+                    static::$_AUTO_INCREMENT_COLUMN = $property->getName();
+                    return static::$_AUTO_INCREMENT_COLUMN;
+                }
+            }
+        }
 
+        return static::$_AUTO_INCREMENT_COLUMN;
+    }
 
 
     /**
@@ -182,22 +201,20 @@ class ModelBase
     }
 
     /**
-     * Get object by id
-     * @param int $id
+     * Get object by primary key
+     * @param int $pk
      * @return static|null
      */
-    public static function get($id)
+    public static function get($pk)
     {
-        // must be numeric
-        if (!is_numeric($id)) {
-            return null;
-        }
+        // TODO: check data type
+        $pk = (int)$pk;
 
         $table = static::getTable();
         $app = Application::getInstance();
 
-        $id_column = static::getAutoIncrementColumn();
-        $data = $app->db->fetchOne("SELECT * FROM $table WHERE $id_column = ?", [$id]);
+        $pk_column = static::getPrimaryKeyColumn();
+        $data = $app->db->fetchOne("SELECT * FROM $table WHERE $pk_column = ?", [$pk]);
 
         if (!$data) {
             return null;
@@ -241,7 +258,8 @@ class ModelBase
     {
         $table = static::getTable();
         $columns = static::getColumns();
-        $id_column = static::getAutoIncrementColumn();
+        $pk_column = static::getPrimaryKeyColumn();
+        $ai_column = static::getAutoIncrementColumn();
 
         $statements = [];
         foreach ($columns as $column) {
@@ -278,13 +296,15 @@ class ModelBase
                 }
             }
 
-            if ($column === $id_column) {
-                // if type is not PK_TYPE, throw an error
-                if ($type !== PK_TYPE) {
-                    throw new \Exception("Auto increment column must be of type " . PK_TYPE . ", got $type");
-                }
-                $extra[] = 'PRIMARY KEY AUTO_INCREMENT';
+            if ($column === $pk_column) {
+                $extra[] = 'PRIMARY KEY';
             }
+
+            if ($column === $ai_column) {
+                // TODO: check type
+                $extra[] = 'AUTO_INCREMENT';
+            }
+
 
             if (count($extra) > 0) {
                 $extra = implode(' ', $extra);
@@ -293,14 +313,11 @@ class ModelBase
             }
 
             $statements[] = "$column $type $extra";
-
         }
 
         return "CREATE TABLE $table (" . implode(', ', $statements) . ")";
     }
 
-
-    public int $id;
 
     public function __construct($data = [])
     {
@@ -309,7 +326,7 @@ class ModelBase
         if (is_array($data)) {
             $this->constructFromArray($data);
         } else {
-            $this->constructFromId($data);
+            $this->constructFromPK($data);
         }
     }
 
@@ -320,15 +337,15 @@ class ModelBase
         }
     }
 
-    private function constructFromId($id)
+    private function constructFromPK($pk)
     {
         $table = static::getTable();
         $app = Application::getInstance();
-        $id_column = static::getAutoIncrementColumn();
-        $data = $app->db->fetchOne("SELECT * FROM $table WHERE $id_column = ?", [$id]);
+        $pk_column = static::getPrimaryKeyColumn();
+        $data = $app->db->fetchOne("SELECT * FROM $table WHERE $pk_column = ?", [$pk]);
 
         if (!$data) {
-            throw new \Exception("Object with id $id does not exist");
+            throw new \Exception("Object with primary key $pk does not exist");
         }
 
         foreach ($data as $key => $value) {
@@ -367,7 +384,7 @@ class ModelBase
         $placeholders = [];
 
         foreach (static::getColumns() as $column) {
-            if ($column === static::getAutoIncrementColumn()) {
+            if ($column === static::getPrimaryKeyColumn()) {
                 continue;
             }
 
@@ -382,9 +399,9 @@ class ModelBase
         $placeholders = implode(', ', $placeholders);
 
         $app->db->execute("INSERT INTO $table ($columns) VALUES ($placeholders)", $values);
-        $this->{static::getAutoIncrementColumn()} = $app->db->lastInsertId();
+        $this->{static::getPrimaryKeyColumn()} = $app->db->lastInsertId();
         // Get the object from the database
-        $this->constructFromId($this->{static::getAutoIncrementColumn()});
+        $this->constructFromPK($this->{static::getPrimaryKeyColumn()});
 
         return $this;
     }
@@ -402,7 +419,7 @@ class ModelBase
         $values = [];
 
         foreach (static::getColumns() as $column) {
-            if ($column === static::getAutoIncrementColumn()) {
+            if ($column === static::getPrimaryKeyColumn()) {
                 continue;
             }
 
@@ -412,12 +429,12 @@ class ModelBase
             }
         }
 
-        $values[] = $this->{static::getAutoIncrementColumn()};
+        $values[] = $this->{static::getPrimaryKeyColumn()};
 
         $columns = implode(', ', $columns);
 
-        $id_column = static::getAutoIncrementColumn();
-        $app->db->execute("UPDATE $table SET $columns WHERE $id_column = ?", $values);
+        $pk_column = static::getPrimaryKeyColumn();
+        $app->db->execute("UPDATE $table SET $columns WHERE $pk_column = ?", $values);
 
         return $this;
     }
@@ -430,8 +447,8 @@ class ModelBase
         $table = static::getTable();
         $app = Application::getInstance();
 
-        $id_column = static::getAutoIncrementColumn();
-        $app->db->execute("DELETE FROM $table WHERE $id_column = ?", [$this->{$id_column}]);
+        $pk_column = static::getPrimaryKeyColumn();
+        $app->db->execute("DELETE FROM $table WHERE $pk_column = ?", [$this->{$pk_column}]);
 
         return $this;
     }
