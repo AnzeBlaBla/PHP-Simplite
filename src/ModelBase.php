@@ -546,7 +546,7 @@ class ModelBase implements \JsonSerializable
     /**
      * Returns a safe representation of this object (hiding sensitive data)
      */
-    public function toArray()
+    public function toArray(): array
     {
         $out = [];
         foreach (static::getColumns() as $key) {
@@ -557,7 +557,7 @@ class ModelBase implements \JsonSerializable
         return $out;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return $this->toArray();
     }
