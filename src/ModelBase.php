@@ -211,9 +211,6 @@ class ModelBase
      */
     public static function get($pk)
     {
-        // TODO: check data type
-        $pk = (int)$pk;
-
         $table = static::getTable();
         $app = Application::getInstance();
 
@@ -507,7 +504,7 @@ class ModelBase
      */
     public function upsert()
     {
-        if ($this->{static::getPrimaryKeyColumn()} && static::get($this->{static::getPrimaryKeyColumn()})) {
+        if ($this->{static::getPrimaryKeyColumn()} && static::get($this->{static::getPrimaryKeyColumn()}) !== null) {
             return $this->update();
         } else {
             return $this->create();
