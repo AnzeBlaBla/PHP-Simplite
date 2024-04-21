@@ -425,27 +425,20 @@ class ModelBase
         return $objects;
     }
 
+
     /**
-     * Returns the INSERT statement for this object
-     * Returns an array with the following structure:
-     * [
-     *   'INSERT INTO ... VALUES ...', # Contains placeholders
-     *  [values] # Contains values to be inserted
-     * ]
-     * @return array
+     * Creates a new object in the database from the values in this instance
      */
-    public function _getInsertStatement()
+    public function create()
     {
         $table = static::getTable();
+        $app = Application::getInstance();
+
         $columns = [];
         $values = [];
         $placeholders = [];
 
         foreach (static::getColumns() as $column) {
-            if ($column === static::getPrimaryKeyColumn()) {
-                continue;
-            }
-
             if (isset($this->$column)) {
                 $columns[] = $column;
                 $values[] = $this->$column;
@@ -456,20 +449,7 @@ class ModelBase
         $columns = implode(', ', $columns);
         $placeholders = implode(', ', $placeholders);
 
-        return ["INSERT INTO $table ($columns) VALUES ($placeholders)", $values];
-
-    }
-
-    /**
-     * Creates a new object in the database from the values in this instance
-     */
-    public function create()
-    {
-        $app = Application::getInstance();
-
-        [$statement, $values] = $this->_getInsertStatement();
-
-        $app->db->execute($statement, $values);
+        $app->db->execute("INSERT INTO $table ($columns) VALUES ($placeholders)", $values);
         $this->{static::getPrimaryKeyColumn()} = $app->db->lastInsertId();
         // Get the object from the database
         $this->constructFromPK($this->{static::getPrimaryKeyColumn()});
@@ -516,33 +496,11 @@ class ModelBase
      */
     public function upsert()
     {
-        // Get the insert statement
-        [$insert_statement, $insert_values] = $this->_getInsertStatement();
-
-        // Add the ON DUPLICATE KEY UPDATE part
-        $table = static::getTable();
-        $columns = [];
-        $values = [];
-
-        foreach (static::getColumns() as $column) {
-            if ($column === static::getPrimaryKeyColumn()) {
-                continue;
-            }
-
-            if (isset($this->$column)) {
-                $columns[] = $column . ' = ?';
-                $values[] = $this->$column;
-            }
+        if ($this->{static::getPrimaryKeyColumn()} && static::get($this->{static::getPrimaryKeyColumn()})) {
+            return $this->update();
+        } else {
+            return $this->create();
         }
-
-        $columns = implode(', ', $columns);
-
-        $on_duplicate_key_update = "ON DUPLICATE KEY UPDATE $columns";
-
-        $app = Application::getInstance();
-        $app->db->execute($insert_statement . $on_duplicate_key_update, array_merge($insert_values, $values));
-
-        return $this;
     }
 
     /**
