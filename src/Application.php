@@ -72,6 +72,7 @@ class Application
             'router_folder' => 'pages',
             'api_folder' => 'api',
             'components_folder' => 'components',
+            'models_folder' => 'models',
             'translations' => [],
             'component_comments' => false, // If true, components will be wrapped in '<!-- BEGIN COMPONENT -->' and '<!-- END COMPONENT -->'
             // db (optional) { host, dbname, username, password }
@@ -86,6 +87,22 @@ class Application
         } else {
             error_reporting(0);
             ini_set('display_errors', 0);
+        }
+
+        // Include all models in the models folder
+        if (isset($config['models_folder'])) {
+            $models_folder = $config['root_directory'] . '/' . $config['models_folder'];
+            if (file_exists($models_folder)) {
+                foreach (scandir($models_folder) as $file) {
+                    if ($file == '.' || $file == '..') {
+                        continue;
+                    }
+                    // Only include php files
+                    if (pathinfo($file, PATHINFO_EXTENSION) == 'php') {
+                        include_once $models_folder . '/' . $file; // TODO: this could be a vulnerability
+                    }
+                }
+            }
         }
 
         $this->config = $config;
