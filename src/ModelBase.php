@@ -164,7 +164,7 @@ class ModelBase implements \JsonSerializable
             }
         }
 
-        return static::$_PRIMARY_KEY_COLUMN;
+        return static::$_PRIMARY_KEY_COLUMN ?? 'id'; // If not set and not found, default to 'id'
     }
 
     /**
