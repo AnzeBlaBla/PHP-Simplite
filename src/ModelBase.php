@@ -100,14 +100,19 @@ class ModelBase implements \JsonSerializable
         $tablename_singular = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', static::class));
 
         // TODO: make this more robust
+        $out_tablename = "";
+
         $last_char = substr($tablename_singular, -1);
         if ($last_char === 's' || $last_char === 'x' || $last_char === 'z' || $last_char === 'o' || $last_char === 'ch' || $last_char === 'sh') {
-            return $tablename_singular . 'es';
+            $out_tablename = $tablename_singular . 'es';
         } else if ($last_char === 'y' && !in_array(substr($tablename_singular, -2, 1), ['a', 'e', 'i', 'o', 'u'])) {
-            return substr($tablename_singular, 0, -1) . 'ies';
+            $out_tablename = substr($tablename_singular, 0, -1) . 'ies';
         } else {
-            return $tablename_singular . 's';
+            $out_tablename = $tablename_singular . 's';
         }
+
+        static::$_TABLE = $out_tablename;
+        return $out_tablename;
     }
 
     /**
@@ -134,6 +139,7 @@ class ModelBase implements \JsonSerializable
             }
         }
 
+        static::$_COLUMNS = $columns;
         return $columns;
     }
 
@@ -150,7 +156,13 @@ class ModelBase implements \JsonSerializable
     static $_PRIMARY_KEY_COLUMN = null;
     public static function getPrimaryKeyColumn()
     {
-        // Try to find property with PK_DOC_PROP
+
+        // If set, return it
+        if (static::$_PRIMARY_KEY_COLUMN !== null) {
+            return static::$_PRIMARY_KEY_COLUMN;
+        }
+
+        // If not set, try to find property with PK_DOC_PROP
         $reflection = new \ReflectionClass(static::class);
         foreach ($reflection->getProperties() as $property) {
             $doc = $property->getDocComment();
@@ -164,7 +176,8 @@ class ModelBase implements \JsonSerializable
             }
         }
 
-        return static::$_PRIMARY_KEY_COLUMN ?? 'id'; // If not set and not found, default to 'id'
+        // If not set and not found, default to 'id'
+        return 'id';
     }
 
     /**
@@ -174,6 +187,11 @@ class ModelBase implements \JsonSerializable
     static $_AUTO_INCREMENT_COLUMN = null;
     public static function getAutoIncrementColumn()
     {
+
+        if (static::$_AUTO_INCREMENT_COLUMN !== null) {
+            return static::$_AUTO_INCREMENT_COLUMN;
+        }
+
         // Try to find property with AUTO_INCREMENT_DOC_PROP
         $reflection = new \ReflectionClass(static::class);
         foreach ($reflection->getProperties() as $property) {
@@ -187,13 +205,12 @@ class ModelBase implements \JsonSerializable
                 }
             }
         }
-
-        return static::$_AUTO_INCREMENT_COLUMN;
     }
 
 
     /**
      * Get all objects
+     * @return static[]
      */
     public static function all()
     {
@@ -224,7 +241,11 @@ class ModelBase implements \JsonSerializable
     }
 
     /**
-     * Get objects by query
+     * Select objects by query
+     * @param string $query
+     * @param array $params
+     * @param string $extra
+     * @return static[]
      */
     public static function find($query, $params = [], $extra = '')
     {
@@ -234,6 +255,27 @@ class ModelBase implements \JsonSerializable
         $data = $app->db->fetchAll("SELECT * FROM $table WHERE $query $extra", $params);
 
         return static::constructMany($data);
+    }
+
+    /**
+     * Select one object by query
+     * @param string $query
+     * @param array $params
+     * @param string $extra
+     * @return static|null
+     */
+    public static function findOne($query, $params = [], $extra = '')
+    {
+        $app = Application::getInstance();
+
+        $table = static::getTable();
+        $data = $app->db->fetchOne("SELECT * FROM $table WHERE $query $extra", $params);
+
+        if (!$data) {
+            return null;
+        }
+
+        return new static($data);
     }
 
     /**
@@ -264,11 +306,25 @@ class ModelBase implements \JsonSerializable
     }
 
     /**
+     * Creates many objects from an array of data
+     * @param array $data
+     * @return static[]
+     */
+    public static function createMany($data)
+    {
+        $objects = static::constructMany($data);
+        foreach ($objects as $object) {
+            $object->create();
+        }
+        return $objects;
+    }
+
+    /**
      * Get the CREATE TABLE statement for this model. Not meant to be called directly (use db create command instead).
      * Returns an object with the following structure:
      * [
      *    'create' => 'CREATE TABLE ...',
-     *   'foreign_keys' => ['FOREIGN KEY ...', ...]
+     *   'alter_statements' => ['FOREIGN KEY ...', ...]
      * ]
      * @return array
      * @throws \Exception
@@ -281,7 +337,7 @@ class ModelBase implements \JsonSerializable
         $ai_column = static::getAutoIncrementColumn();
 
         $statements = [];
-        $foreign_keys = [];
+        $alter_statements = [];
         foreach ($columns as $column) {
             // Find property of the same name
             $type = 'TEXT';
@@ -337,7 +393,7 @@ class ModelBase implements \JsonSerializable
                             $deleteUpdate = '';
                         }
 
-                        $foreign_keys[] = "ALTER TABLE $table ADD FOREIGN KEY ($column) REFERENCES $fk_table($fk_column)$deleteUpdate";
+                        $alter_statements[] = "ALTER TABLE $table ADD FOREIGN KEY ($column) REFERENCES $fk_table($fk_column)$deleteUpdate";
                     }
                 }
 
@@ -379,7 +435,7 @@ class ModelBase implements \JsonSerializable
 
         return [
             'create' => "CREATE TABLE $table (" . implode(', ', $statements) . ")",
-            'foreign_keys' => $foreign_keys
+            'alter_statements' => $alter_statements
         ];
     }
 
@@ -417,24 +473,6 @@ class ModelBase implements \JsonSerializable
             $this->$key = $value;
         }
     }
-
-    /**
-     * Creates many objects from an array of data
-     * @param array $data
-     * @return static[]
-     */
-    public static function createMany($data)
-    {
-        $objects = [];
-        foreach ($data as $row) {
-            $newObj = new static($row);
-            $newObj->create();
-
-            $objects[] = $newObj;
-        }
-        return $objects;
-    }
-
 
     /**
      * Creates a new object in the database from the values in this instance
