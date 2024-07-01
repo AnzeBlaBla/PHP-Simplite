@@ -18,6 +18,10 @@ TODO: write
 
 https://medium.com/@mazraara/create-a-composer-package-and-publish-3683596dec45
 
+
+https://packagist.org/
+
+
 ## Example of use
 
 
