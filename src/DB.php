@@ -7,7 +7,7 @@ use PDO;
 class DB {
 
     private $conn;
-    private function __construct($errMode = PDO::ERRMODE_EXCEPTION) {
+    private function __construct($errMode = PDO::ERRMODE_EXCEPTION, $enableUtf8 = true) {
         $app_config = Application::getInstance()->getConfig();
 
         // db key must be present in config
@@ -15,7 +15,11 @@ class DB {
             throw new \Exception("DB config not found");
         }
         
-        $this->conn = new PDO("mysql:host=" . $app_config["db"]["host"] . ";dbname=" . $app_config["db"]["dbname"], $app_config["db"]["username"], $app_config["db"]["password"]);
+        $this->conn = new PDO(
+            "mysql:host=" . $app_config["db"]["host"] . ";dbname=" . $app_config["db"]["dbname"] . $enableUtf8 ? ";charset=utf8" : "",
+            $app_config["db"]["username"],
+            $app_config["db"]["password"]
+        );
         
         $this->conn->setAttribute(PDO::ATTR_ERRMODE, $errMode);
     }
