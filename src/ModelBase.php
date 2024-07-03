@@ -87,18 +87,32 @@ class ModelBase implements \JsonSerializable
     protected $app;
 
     /**
-     * The table name
+     * Cache in order to not recalculate these values every time for each subclass
+     * Array of 
+     * @var string[]
      */
-    // TODO: static:: will always reference the same value (of the parent class),
-    // so we need to make an array and save things there to bypass this limitation,
-    // like https://stackoverflow.com/questions/2751719/inherit-static-properties-in-subclass-without-redeclaration
+    private static $_SQL_CACHE = [];
+    protected static function getCache($key)
+    {
+        return self::$_SQL_CACHE[self::class][$key] ?? null;
+    }
+    protected static function hasCache($key)
+    {
+        return isset(self::$_SQL_CACHE[self::class][$key]);
+    }
+    protected static function setCache($key, $value)
+    {
+        if (!isset(self::$_SQL_CACHE[self::class])) {
+            self::$_SQL_CACHE[self::class] = [];
+        }
+        self::$_SQL_CACHE[self::class][$key] = $value;
+    }
 
-    static $_TABLE = null;
     static function getTable()
     {
         // If table is not null, return it
-        if (static::$_TABLE !== null) {
-            return static::$_TABLE;
+        if (self::hasCache('table')) {
+            return self::getCache('table');
         }
         // If table is null, return the class name in snake_case, plural 
         $tablename_singular = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', static::class));
@@ -115,20 +129,15 @@ class ModelBase implements \JsonSerializable
             $out_tablename = $tablename_singular . 's';
         }
 
-        static::$_TABLE = $out_tablename;
+        self::setCache('table', $out_tablename);
         return $out_tablename;
     }
 
-    /**
-     * The columns in the table
-     * @var string[]
-     */
-    static $_COLUMNS = null;
     static function getColumns()
     {
         // If columns is not null, return it
-        if (static::$_COLUMNS !== null) {
-            return static::$_COLUMNS;
+        if (self::hasCache('columns')) {
+            return self::getCache('columns');
         }
         // If columns is null, loop all class properties and return the ones that contain the @SimpliteType annotation
         $columns = [];
@@ -143,7 +152,7 @@ class ModelBase implements \JsonSerializable
             }
         }
 
-        static::$_COLUMNS = $columns;
+        self::setCache('columns', $columns);
         return $columns;
     }
 
@@ -157,13 +166,12 @@ class ModelBase implements \JsonSerializable
      * Primary key column
      * @var string
      */
-    static $_PRIMARY_KEY_COLUMN = null;
     public static function getPrimaryKeyColumn()
     {
 
         // If set, return it
-        if (static::$_PRIMARY_KEY_COLUMN !== null) {
-            return static::$_PRIMARY_KEY_COLUMN;
+        if (self::hasCache('pk_column')) {
+            return self::getCache('pk_column');
         }
 
         // If not set, try to find property with PK_DOC_PROP
@@ -174,8 +182,9 @@ class ModelBase implements \JsonSerializable
                 $parsed = parseDocBlock($doc);
                 if (isset($parsed[PK_DOC_PROP])) {
                     // Set the primary key column to the property name
-                    static::$_PRIMARY_KEY_COLUMN = $property->getName();
-                    return static::$_PRIMARY_KEY_COLUMN;
+                    $pk_column = $property->getName();
+                    self::setCache('pk_column', $$pk_column);
+                    return $pk_column;
                 }
             }
         }
@@ -188,12 +197,11 @@ class ModelBase implements \JsonSerializable
      * Auto increment column
      * @var string
      */
-    static $_AUTO_INCREMENT_COLUMN = null;
     public static function getAutoIncrementColumn()
     {
 
-        if (static::$_AUTO_INCREMENT_COLUMN !== null) {
-            return static::$_AUTO_INCREMENT_COLUMN;
+        if (self::hasCache('ai_column')) {
+            return self::getCache('ai_column');
         }
 
         // Try to find property with AUTO_INCREMENT_DOC_PROP
@@ -204,8 +212,9 @@ class ModelBase implements \JsonSerializable
                 $parsed = parseDocBlock($doc);
                 if (isset($parsed[AUTO_INCREMENT_DOC_PROP])) {
                     // Set the auto increment column to the property name
-                    static::$_AUTO_INCREMENT_COLUMN = $property->getName();
-                    return static::$_AUTO_INCREMENT_COLUMN;
+                    $ai_column = $property->getName();
+                    self::setCache('ai_column', $ai_column);
+                    return $ai_column;
                 }
             }
         }
