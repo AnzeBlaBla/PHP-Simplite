@@ -4,23 +4,30 @@ namespace AnzeBlaBla\Simplite;
 
 use PDO;
 
-class DB {
+class DB
+{
 
     private $conn;
-    private function __construct($errMode = PDO::ERRMODE_EXCEPTION, $enableUtf8 = true) {
+    private function __construct($errMode = PDO::ERRMODE_EXCEPTION, $enableUtf8 = true)
+    {
         $app_config = Application::getInstance()->getConfig();
 
         // db key must be present in config
         if (!isset($app_config["db"])) {
             throw new \Exception("DB config not found");
         }
-        
+
         $this->conn = new PDO(
-            "mysql:host=" . $app_config["db"]["host"] . ";dbname=" . $app_config["db"]["dbname"] . $enableUtf8 ? ";charset=utf8" : "",
+            (
+                "mysql:host=" . $app_config["db"]["host"] . ";dbname=" . $app_config["db"]["dbname"] .
+                (
+                    $enableUtf8 ? ";charset=utf8" : ""
+                )
+            ),
             $app_config["db"]["username"],
             $app_config["db"]["password"]
         );
-        
+
         $this->conn->setAttribute(PDO::ATTR_ERRMODE, $errMode);
     }
 
@@ -31,7 +38,8 @@ class DB {
      * Get the singleton instance of this class
      * @return DB
      */
-    public static function getInstance() : DB {
+    public static function getInstance(): DB
+    {
         if (!self::$instance) {
             self::$instance = new DB();
         }
@@ -46,8 +54,9 @@ class DB {
      * @param array $params
      * @return PDOStatement
      */
-    public function execute($sql, $params = []) {
-        $stmt = $this->conn->prepare($sql);        
+    public function execute($sql, $params = [])
+    {
+        $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
         return $stmt;
     }
@@ -58,7 +67,8 @@ class DB {
      * @param array $params
      * @return PDOStatement
      */
-    public function execute_with_types($sql, $params = []) {
+    public function execute_with_types($sql, $params = [])
+    {
         $stmt = $this->conn->prepare($sql);
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value['value'], $value['type']);
@@ -73,7 +83,8 @@ class DB {
      * @param array $params
      * @return array
      */
-    public function fetchOne($sql, $params = []) {
+    public function fetchOne($sql, $params = [])
+    {
         $stmt = $this->execute($sql, $params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -84,7 +95,8 @@ class DB {
      * @param array $params
      * @return array
      */
-    public function fetchAll($sql, $params = []) {
+    public function fetchAll($sql, $params = [])
+    {
         $stmt = $this->execute($sql, $params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -93,13 +105,15 @@ class DB {
      * Execute multiple queries
      * @param string $sql
      */
-    public function multi_execute($sql) {
+    public function multi_execute($sql)
+    {
         $this->conn->exec($sql);
     }
 
 
 
-    public function insert($table, $data) {
+    public function insert($table, $data)
+    {
         $keys = array_keys($data);
         $values = array_values($data);
 
@@ -107,7 +121,8 @@ class DB {
         $this->execute($sql, $values);
     }
 
-    public function lastInsertId($name = null) {
+    public function lastInsertId($name = null)
+    {
         return $this->conn->lastInsertId($name);
     }
 
@@ -115,8 +130,8 @@ class DB {
      * Last error
      * @return array
      */
-    public function lastError() {
+    public function lastError()
+    {
         return $this->conn->errorInfo();
     }
-
 }
