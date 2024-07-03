@@ -89,6 +89,10 @@ class ModelBase implements \JsonSerializable
     /**
      * The table name
      */
+    // TODO: static:: will always reference the same value (of the parent class),
+    // so we need to make an array and save things there to bypass this limitation,
+    // like https://stackoverflow.com/questions/2751719/inherit-static-properties-in-subclass-without-redeclaration
+
     static $_TABLE = null;
     static function getTable()
     {
