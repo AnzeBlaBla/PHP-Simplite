@@ -94,18 +94,18 @@ class ModelBase implements \JsonSerializable
     private static $_SQL_CACHE = [];
     protected static function getCache($key)
     {
-        return self::$_SQL_CACHE[self::class][$key] ?? null;
+        return self::$_SQL_CACHE[static::class][$key] ?? null;
     }
     protected static function hasCache($key)
     {
-        return isset(self::$_SQL_CACHE[self::class][$key]);
+        return isset(self::$_SQL_CACHE[static::class][$key]);
     }
     protected static function setCache($key, $value)
     {
-        if (!isset(self::$_SQL_CACHE[self::class])) {
-            self::$_SQL_CACHE[self::class] = [];
+        if (!isset(self::$_SQL_CACHE[static::class])) {
+            self::$_SQL_CACHE[static::class] = [];
         }
-        self::$_SQL_CACHE[self::class][$key] = $value;
+        self::$_SQL_CACHE[static::class][$key] = $value;
     }
 
     static function getTable()
@@ -183,7 +183,7 @@ class ModelBase implements \JsonSerializable
                 if (isset($parsed[PK_DOC_PROP])) {
                     // Set the primary key column to the property name
                     $pk_column = $property->getName();
-                    self::setCache('pk_column', $$pk_column);
+                    self::setCache('pk_column', $pk_column);
                     return $pk_column;
                 }
             }
