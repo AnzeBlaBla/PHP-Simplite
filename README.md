@@ -15,6 +15,7 @@ TODO: write
 - [x] Problem if using COMPONENT_ID when replacing some component with a chunk, ID could duplicate
 - [ ] Problem where page is rendered before layout. Could potentially result in vulns or errors where user is used before it's checked if user is logged in at all.
 - [ ] Autoloader
+- [ ] Table comments
 
 ## Publishing
 

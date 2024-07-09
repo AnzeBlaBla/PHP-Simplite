@@ -12,6 +12,7 @@ define('FK_ON_UPDATE_DOC_PROP', 'SimpliteFKOnUpdate');
 define('AUTO_INCREMENT_DOC_PROP', 'SimpliteAutoIncrement');
 define('DEFAULT_DOC_PROP', 'SimpliteDefault');
 define('ON_UPDATE_DOC_PROP', 'SimpliteOnUpdate');
+define('COMMENT_DOC_PROP', 'SimpliteComment'); // Will appear as a comment in the SQL table
 
 // TODO: implement upsert
 
@@ -65,16 +66,23 @@ function simpliteTypeToMySQLType($type)
  * 
  * Example 2:
  * @SimpliteType
+ * 
+ * Example 3:
+ * @SimpliteType
+ * @SimpliteFK User.id
+ * @SimpliteComment This is a comment
  */
 function parseDocBlock($doc)
 {
     $matches = [];
-    preg_match_all('/@([a-zA-Z]+)\s*([0-9a-zA-Z_\-\(\)]*)/', $doc, $matches);
+    preg_match_all('/@(\w+)(?:\s(.*))?/', $doc, $matches);
     $out = [];
     foreach ($matches[1] as $i => $key) {
         $value = $matches[2][$i];
         if ($value === '') {
             $value = true;
+        } else {
+            $value = trim($value);
         }
         $out[$key] = $value;
     }
@@ -411,43 +419,52 @@ class ModelBase implements \JsonSerializable
                 }
 
                 // If property is not optional, add NOT NULL
-                if (!$rp->hasType() || !$rp->getType()->allowsNull()) {
+                $nullable = ($rp->hasType() && $rp->getType()->allowsNull());
+                if (!$nullable) {
                     $extra[] = 'NOT NULL';
                 }
 
-                // If property has a default value, add DEFAULT
+                // If property has a specified default value add DEFAULT
+                // OR if it is nullable, add DEFAULT NULL
                 if (isset($parsed[DEFAULT_DOC_PROP])) {
                     $extra[] = 'DEFAULT ' . $parsed[DEFAULT_DOC_PROP];
+                } else if ($nullable) {
+                    $extra[] = 'DEFAULT NULL';
                 }
 
                 // Add ON UPDATE
                 if (isset($parsed[ON_UPDATE_DOC_PROP])) {
                     $extra[] = 'ON UPDATE ' . $parsed[ON_UPDATE_DOC_PROP];
                 }
+
+                if ($column === $pk_column) {
+                    $extra[] = 'PRIMARY KEY';
+                }
+
+                if ($column === $ai_column) {
+                    // TODO: check type
+                    $extra[] = 'AUTO_INCREMENT';
+                }
+
+                // Add comment
+                if (isset($parsed[COMMENT_DOC_PROP])) {
+                    $extra[] = 'COMMENT \'' . $parsed[COMMENT_DOC_PROP] . '\'';
+                }
+
+
+                if (count($extra) > 0) {
+                    $extra = implode(' ', $extra);
+                } else {
+                    $extra = '';
+                }
+
+                $statements[] = "`$column` $type $extra";
             }
-
-            if ($column === $pk_column) {
-                $extra[] = 'PRIMARY KEY';
-            }
-
-            if ($column === $ai_column) {
-                // TODO: check type
-                $extra[] = 'AUTO_INCREMENT';
-            }
-
-
-            if (count($extra) > 0) {
-                $extra = implode(' ', $extra);
-            } else {
-                $extra = '';
-            }
-
-            $statements[] = "$column $type $extra";
         }
 
 
         return [
-            'create' => "CREATE TABLE $table (" . implode(', ', $statements) . ")",
+            'create' => "CREATE TABLE `$table` (" . implode(', ', $statements) . ")",
             'alter_statements' => $alter_statements
         ];
     }
@@ -523,7 +540,7 @@ class ModelBase implements \JsonSerializable
 
         if ($ai_column)
             $this->{$ai_column} = $last_id;
-        
+
         // Get the object from the database
         try {
             $this->constructFromPK($this->{static::getPrimaryKeyColumn()});
