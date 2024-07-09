@@ -116,8 +116,17 @@ class ModelBase implements \JsonSerializable
         self::$_SQL_CACHE[static::class][$key] = $value;
     }
 
+    /**
+     * Manual table name
+     */
+    protected static $_TABLE = null;
+
     static function getTable()
     {
+        // If table is manually set, return it
+        if (static::$_TABLE) {
+            return static::$_TABLE;
+        }
         // If table is not null, return it
         if (self::hasCache('table')) {
             return self::getCache('table');
