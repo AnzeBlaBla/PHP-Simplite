@@ -388,10 +388,10 @@ class ModelBase implements \JsonSerializable
                             $fk_class = new \ReflectionClass($fk_table);
                         } catch (\ReflectionException $e) {
                             // Throw exception with current class name
-                            throw new \Exception("Foreign key class $fk_table does not exist or is not a subclass of " . ModelBase::class . " in " . static::class);
+                            throw new \Exception("Foreign key class $fk_table does not exist");
                         }
                         if (!$fk_class->isSubclassOf(ModelBase::class)) {
-                            throw new \Exception("Foreign key class $fk_table does not exist or is not a subclass of " . ModelBase::class);
+                            throw new \Exception("Foreign key class $fk_table is not a subclass of " . ModelBase::class);
                         }
 
                         $fk_table = $fk_class->getMethod('getTable')->invoke(null);

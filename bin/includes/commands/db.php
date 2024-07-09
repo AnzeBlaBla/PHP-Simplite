@@ -20,6 +20,13 @@ function get_db_creation_sql($models_folder)
             // if class not already loaded
             if (!class_exists(pathinfo($path, PATHINFO_FILENAME))) {
                 require_once $path;
+            } else {
+                // If not user-defined, notify user of name collision and terminate
+                $reflection = new ReflectionClass(pathinfo($path, PATHINFO_FILENAME));
+                if ($reflection->isInternal()) {
+                    echo "Model class name collision: $model. It is a reserved class name, change it.\n";
+                    exit(1);
+                }
             }
         }
     }
