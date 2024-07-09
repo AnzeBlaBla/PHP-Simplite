@@ -5,9 +5,23 @@ use AnzeBlaBla\Simplite\ModelBase;
 function get_db_creation_sql($models_folder)
 {
     $models = array_diff(scandir($models_folder), ['.', '..']);
+    // register autoloader (to prevent class not found errors)
+    spl_autoload_register(function ($class) use ($models_folder) {
+        $path = "$models_folder/$class.php";
+        if (is_file($path) && is_readable($path) && pathinfo($path, PATHINFO_EXTENSION) === 'php') {
+            require_once $path;
+        }
+    });
     // include all models
     foreach ($models as $model) {
-        include "$models_folder/$model";
+        $path = "$models_folder/$model";
+        // if readable PHP file
+        if (is_file($path) && is_readable($path) && pathinfo($path, PATHINFO_EXTENSION) === 'php') {
+            // if class not already loaded
+            if (!class_exists(pathinfo($path, PATHINFO_FILENAME))) {
+                require_once $path;
+            }
+        }
     }
 
     // Find all subclasses of ModelBase

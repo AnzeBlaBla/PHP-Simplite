@@ -5,6 +5,7 @@ This is a very simple PHP framework to make implementig PHP websites easier and 
 ## Functionality
 
 TODO: write
+
 ## Todo
 
 - [ ] Write better documentation
@@ -13,6 +14,7 @@ TODO: write
 - [ ] Router is inconsistent with trailing slash (css and js includes break) - it should redirect to always have trailing slash
 - [x] Problem if using COMPONENT_ID when replacing some component with a chunk, ID could duplicate
 - [ ] Problem where page is rendered before layout. Could potentially result in vulns or errors where user is used before it's checked if user is logged in at all.
+- [ ] Autoloader
 
 ## Publishing
 
